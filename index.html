@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>吴门针阵查询</title>
+<style>
+:root {
+  --bg: #f5f7f5;
+  --card-bg: #ffffff;
+  --text: #2c3e2d;
+  --text-light: #5a7d5c;
+  --accent: #4a9e5c;
+  --accent-light: #e8f5e9;
+  --border: #dcedc8;
+  --tag-bg: #e8f5e9;
+  --tag-text: #2e7d32;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --radius: 12px;
+  --formula-bg: #f3e5f5;
+  --classic-bg: #e8eaf6;
+  --combo-bg: #fff3e0;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  min-height: 100vh;
+}
+.header {
+  background: linear-gradient(135deg, #2e7d32 0%, #4a9e5c 50%, #66bb6a 100%);
+  color: #fff;
+  padding: 28px 20px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 16px rgba(46,125,50,0.2);
+}
+.header h1 { font-size: 1.6em; font-weight: 700; letter-spacing: 2px; }
+.header p { font-size: 0.85em; opacity: 0.85; margin-top: 4px; }
+.container { max-width: 960px; margin: 0 auto; padding: 16px; }
+.search-box {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.search-box input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 16px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-box input:focus { border-color: var(--accent); }
+.filter-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.filter-btn {
+  padding: 6px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  background: var(--card-bg);
+  color: var(--text-light);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.filter-btn:hover, .filter-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--accent);
+  transition: transform 0.15s;
+}
+.card:hover { transform: translateY(-1px); }
+.card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.card-header .icon { font-size: 1.5em; }
+.card-header h2 { font-size: 1.15em; color: #1b5e20; }
+.card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.tag-acupoint { background: #e8f5e9; color: #2e7d32; }
+.tag-formula { background: #f3e5f5; color: #7b1fa2; }
+.tag-disease { background: #fff3e0; color: #e65100; }
+.tag-zangfu { background: #e3f2fd; color: #1565c0; }
+.tag-classic { background: #e8eaf6; color: #283593; }
+.acupoint-list { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
+.acupoint { background: var(--tag-bg); color: var(--tag-text); padding: 2px 8px; border-radius: 4px; font-size: 13px; font-weight: 500; }
+.section { margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 14px; }
+.section-formula { background: var(--formula-bg); }
+.section-classic { background: var(--classic-bg); border-left: 3px solid #5c6bc0; }
+.section-combo { background: var(--combo-bg); border-left: 3px solid #ff9800; }
+.section-label { font-weight: 700; color: var(--text); margin-bottom: 4px; font-size: 13px; }
+.section-label::before { content: '▸ '; color: var(--accent); }
+.detail-item { padding: 3px 0; font-size: 13px; color: var(--text-light); }
+.detail-item strong { color: var(--text); }
+.highlight { background: #fff176; padding: 1px 3px; border-radius: 2px; }
+.no-result { text-align: center; padding: 40px; color: var(--text-light); }
+.category-title {
+  font-size: 1.1em;
+  font-weight: 700;
+  color: #1b5e20;
+  margin: 20px 0 10px;
+  padding-left: 12px;
+  border-left: 3px solid var(--accent);
+}
+.disease-section {
+  background: #fafafa;
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+.disease-section h3 {
+  font-size: 1em;
+  color: #e65100;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--border);
+}
+.disease-formula { display: flex; flex-wrap: wrap; gap: 4px; }
+.disease-tag {
+  background: #fff3e0;
+  color: #e65100;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.separator { color: #bbb; margin: 0 2px; }
+.footer { text-align: center; padding: 30px; color: var(--text-light); font-size: 13px; }
+@media (max-width: 600px) {
+  .container { padding: 10px; }
+  .card { padding: 14px; }
+  .header h1 { font-size: 1.3em; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>吴门针阵查询</h1>
+  <p>神机十三阵 · 配穴方义 · 经典条文</p>
+</div>
+
+<div class="container">
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="搜索针阵名、穴位、适应症、方剂…" oninput="filterCards()">
+  </div>
+  <div class="filter-btns" id="filterBtns">
+    <button class="filter-btn active" onclick="setFilter('all', this)">全部</button>
+    <button class="filter-btn" onclick="setFilter('心', this)">心</button>
+    <button class="filter-btn" onclick="setFilter('肾', this)">肾</button>
+    <button class="filter-btn" onclick="setFilter('肝', this)">肝</button>
+    <button class="filter-btn" onclick="setFilter('脾', this)">脾</button>
+    <button class="filter-btn" onclick="setFilter('安神', this)">安神</button>
+    <button class="filter-btn" onclick="setFilter('温阳', this)">温阳</button>
+    <button class="filter-btn" onclick="setFilter('镇惊', this)">镇惊</button>
+    <button class="filter-btn" onclick="setFilter('解郁', this)">解郁</button>
+    <button class="filter-btn" onclick="setFilter('补肾', this)">补肾</button>
+    <button class="filter-btn" onclick="setFilter('调神', this)">调神</button>
+    <button class="filter-btn" onclick="setFilter('舒肝', this)">舒肝</button>
+  </div>
+
+  <div id="cardsContainer"></div>
+</div>
+
+<div class="footer">吴门医述 · 针阵图谱 · 仅供参考学习</div>
+
+<script>
+const cards = [
+  // ===== 心系 =====
+  {
+    id: 1,
+    name: "一字通灵阵",
+    category: "心",
+    tags: ["安神","心"],
+    acupoints: ["大陵","内关","间使","二白","郄门","上郄门"],
+    acupointDetails: [
+      "上郄门：郄门上一寸(6寸)，专治癔病",
+      "郄门：《针灸甲乙经》——心痛，衄哕呕血，惊恐畏人，神气不足，郄门主之",
+      "郄门主治：冠脉综合征、缓解心梗恐惧、焦虑恐怖症、神经衰弱、癫痫、胸痛(心脏神经官能症)、心动过速(配少海)",
+      "支沟压迫时加：外关、支沟"
+    ],
+    formulaDetail: "癫狂梦醒汤之意",
+    classic: "《针灸甲乙经》：心痛，衄哕呕血，惊恐畏人，神气不足，郄门主之。",
+    combos: ["精神分裂：一字通灵阵 + 猛虎归巢阵"],
+    indications: ["精神分裂","焦虑","癔病","惊恐","冠脉综合征"],
+    notes: "舒肝散寒，安神定志"
+  },
+  {
+    id: 2,
+    name: "小神通阵",
+    category: "心",
+    tags: ["安神","心"],
+    acupoints: ["神门","通里","阴郄","灵道","支正"],
+    acupointDetails: [
+      "支正：5寸，刺激尺神经",
+      "不通则肿，阴见紫气，神有脉息"
+    ],
+    formulaDetail: "养心安神之阵",
+    combos: [],
+    indications: ["神经衰弱","失眠","心悸"],
+    notes: "养心、安神"
+  },
+  {
+    id: 3,
+    name: "木火通明阵",
+    category: "心",
+    tags: ["温阳","心"],
+    acupoints: ["大陵","间使","阳溪","支正","少冲"],
+    acupointDetails: [
+      "间使：晚上见鬼",
+      "阳溪：白天梦鬼",
+      "大陵：梦过世的亲人",
+      "三维针法+支正（尺神经）+少冲"
+    ],
+    formulaDetail: "桂枝甘草汤、桂枝甘草龙骨牡蛎救逆汤之意",
+    classic: "",
+    combos: ["焦虑：木火通明阵（温心阳）"],
+    indications: ["幻觉","焦虑","心阳虚","惊恐"],
+    notes: "起阳火、温心阳、闭阴眼，除幻觉"
+  },
+  {
+    id: 4,
+    name: "小天心阵",
+    category: "心",
+    tags: ["安神","心"],
+    acupoints: ["小天心","坎宫","大陵"],
+    acupointDetails: [
+      "小天心：小儿推拿要穴",
+      "可与猛虎归巢阵同扎"
+    ],
+    formulaDetail: "潜阳安神",
+    combos: ["肾虚失眠：小天心阵"],
+    indications: ["肾虚失眠","心烦","小儿惊风"],
+    notes: "潜阳，肾虚失眠"
+  },
+
+  // ===== 肾系 =====
+  {
+    id: 5,
+    name: "一字通阳阵",
+    category: "肾",
+    tags: ["补肾","肾"],
+    acupoints: ["灵台","神道","至阳"],
+    acupointDetails: [
+      "灵台：爽灵之台，主喜悦、多巴胺分泌。灵台穴常见两种病：妇人悲忧伤哭；吸毒者反应迟钝、成瘾（多巴胺受损）",
+      "神道：神出鬼没，阳气至则阴邪退",
+      "至阳：先针灸至阳。神不出则火不足，灵台不明"
+    ],
+    formulaDetail: "神光之阵，通阳开窍",
+    combos: [],
+    indications: ["抑郁","悲忧伤哭","成瘾","灵台不明"],
+    notes: "灵台-神道-至阳，三穴通神光"
+  },
+  {
+    id: 6,
+    name: "山天开阵",
+    category: "肾",
+    tags: ["补肾","肾"],
+    acupoints: ["山天开阵诸穴"],
+    acupointDetails: [],
+    formulaDetail: "补肾之阵",
+    combos: ["情感障碍：山天开阵（补肾）"],
+    indications: ["肾虚","情感障碍"],
+    notes: "补肾"
+  },
+  {
+    id: 7,
+    name: "大离火阵",
+    category: "肾",
+    tags: ["温阳","肾"],
+    acupoints: ["腕骨","支正","通里"],
+    acupointDetails: [
+      "小离火阵基础上加腕骨、支正、通里",
+      "躁狂抑郁症：四木开井 + 大离火阵"
+    ],
+    formulaDetail: "温阳之阵",
+    combos: ["躁狂抑郁症：四木开井 + 大离火阵"],
+    indications: ["躁狂抑郁症","阳虚"],
+    notes: "小离火阵加大"
+  },
+  {
+    id: 8,
+    name: "小离火阵",
+    category: "肾",
+    tags: ["温阳","肾"],
+    acupoints: ["小离火阵诸穴"],
+    acupointDetails: [],
+    formulaDetail: "温阳基础阵",
+    combos: ["情感障碍：小离火阵（温阳）"],
+    indications: ["阳虚"],
+    notes: "基础温阳阵"
+  },
+  {
+    id: 9,
+    name: "少阴离合阵",
+    category: "肾",
+    tags: ["调神","肾"],
+    acupoints: ["复溜","交信","附阳","太溪","支正"],
+    acupointDetails: [
+      "交信：阴跷脉郄穴，主眼睛开合",
+      "跗阳：阳跷脉郄穴，主眼睛开合",
+      "复溜+附阳：昌附之阳，桂枝附子",
+      "太溪+交信：阴，地黄萸肉",
+      "太溪+复溜：地黄附子",
+      "太溪：肾经原穴",
+      "支正：在太阳，如防风"
+    ],
+    formulaDetail: "桂枝附子+地黄萸肉+地黄附子+防风，调神之阵",
+    combos: ["情感障碍：少阴离合阵（调神，神经衰弱）"],
+    indications: ["神经衰弱","情感障碍","眼睛开合异常"],
+    notes: "调神，神经衰弱"
+  },
+
+  // ===== 肝系 =====
+  {
+    id: 10,
+    name: "四木开井阵",
+    category: "肝",
+    tags: ["舒肝","肝"],
+    acupoints: ["四木开井穴"],
+    acupointDetails: [
+      "四木开井：肝经井穴组合",
+      "躁狂抑郁症：四木开井 + 大离火阵",
+      "早泄梦鬼：四木中封 + 阴门艾灸"
+    ],
+    formulaDetail: "舒肝解郁",
+    combos: ["躁狂抑郁症：四木开井 + 大离火阵","情感障碍：四木开井阵（舒肝）"],
+    indications: ["躁狂抑郁症","情感障碍","早泄梦鬼"],
+    notes: "舒肝"
+  },
+  {
+    id: 11,
+    name: "一字通天阵",
+    category: "肝",
+    tags: ["解郁","肝"],
+    acupoints: ["天人通一","天人通二","天人通三","天人通四(少府)","上郄门"],
+    acupointDetails: [
+      "天人通一：劳宫稍下，食指中指缝后一寸（人附穴，为人部始穴）",
+      "天人通二：中指无名指后一寸（少府穴，为天部终穴）",
+      "天人通三：中指指关节后一寸（上天心，当天心上0.2寸）",
+      "天人通四：少府",
+      "上郄门：郄门上一寸(6寸)，治癔病",
+      "天人通三穴连通天部与人部",
+      "可配冲关夺门阵"
+    ],
+    formulaDetail: "半夏厚朴汤之意（合谷三间=半夏厚朴，太冲行间=苏叶）",
+    combos: ["癔病：一字通天阵（半夏厚朴汤）"],
+    indications: ["癔病","梅核气","牙痛"],
+    notes: "牙风痛加手内庭、天人通三"
+  },
+  {
+    id: 12,
+    name: "四关八定阵",
+    category: "肝",
+    tags: ["解郁","肝"],
+    acupoints: ["四关","八定","通里"],
+    acupointDetails: [
+      "四关：太冲、合谷",
+      "八定：三间、行间",
+      "阵眼：通里",
+      "行间太冲不通：扎地五会；还有压迫：扎关冲（让气血冲出肝经）",
+      "地五会：头会、胸会、气会、臑会、耳会，上半身症状加地五会（乳腺、甲状腺等）",
+      "上火：地五会扎针",
+      "退火：涌泉（少阴木穴）",
+      "四木加合谷内关：治晚上胃食管反流"
+    ],
+    formulaDetail: "越鞠丸之意",
+    combos: ["癔病：四关八定阵（越鞠丸）"],
+    indications: ["癔病","胃食管反流","郁证"],
+    notes: "解郁，四关八定加通里"
+  },
+  {
+    id: 13,
+    name: "冲关夺门阵",
+    category: "肝",
+    tags: ["舒肝","肝"],
+    acupoints: ["冲关夺门穴"],
+    acupointDetails: [
+      "可配一字通天阵"
+    ],
+    formulaDetail: "治反流",
+    combos: [],
+    indications: ["胃食管反流"],
+    notes: "反流"
+  },
+
+  // ===== 脾系 =====
+  {
+    id: 14,
+    name: "无可奈何阵",
+    category: "脾",
+    tags: ["镇惊","脾"],
+    acupoints: ["隐白","大都","公孙","太白","定冲","厉兑"],
+    acupointDetails: [
+      "厉兑：急性惊吓",
+      "小儿客杵：大都",
+      "天地十二井表里阴阳配穴法"
+    ],
+    formulaDetail: "苓桂术甘汤之意",
+    combos: ["焦虑：无可奈何阵（镇惊，苓桂术甘汤）"],
+    indications: ["急性惊恐发作","小儿客杵","焦虑"],
+    notes: "镇惊，急性惊恐发作"
+  },
+  {
+    id: 15,
+    name: "猛虎归巢阵",
+    category: "脾",
+    tags: ["安神","脾"],
+    acupoints: ["三间","虎边","合谷","间使"],
+    acupointDetails: [
+      "可与小天心阵同扎"
+    ],
+    formulaDetail: "下瘀血汤之意",
+    combos: ["精神分裂：一字通灵阵 + 猛虎归巢阵","情感障碍：猛虎归巢阵（下痰瘀）"],
+    indications: ["精神分裂","情感障碍","痰瘀"],
+    notes: "下痰瘀"
+  },
+  {
+    id: 16,
+    name: "礞石滚痰丸（方穴对应）",
+    category: "脾",
+    tags: ["安神","脾"],
+    acupoints: ["合谷","少溪","三间","阳溪"],
+    acupointDetails: [
+      "大黄、礞石 → 合谷、少溪",
+      "黄芩 → 三间",
+      "沉香 → 阳溪"
+    ],
+    formulaDetail: "礞石滚痰丸：大黄、礞石、黄芩、沉香",
+    combos: [],
+    indications: ["痰热","精神异常"],
+    notes: "方穴对应，化痰清热"
+  }
+];
+
+const diseases = [
+  {
+    name: "精神分裂",
+    formulas: ["一字通灵阵（癫狂梦醒汤）","猛虎归巢阵（下瘀血汤）"]
+  },
+  {
+    name: "情感障碍",
+    formulas: ["四木开井阵（舒肝）","山天开阵（补肾）","小离火阵（温阳）","少阴离合阵（调神）","猛虎归巢阵（下痰瘀）"]
+  },
+  {
+    name: "焦虑",
+    formulas: ["无可奈何阵（苓桂术甘汤）","木火通明阵（柴胡桂枝龙骨牡蛎汤）"]
+  },
+  {
+    name: "癔病",
+    formulas: ["四关八定阵（越鞠丸）","一字通天阵（半夏厚朴汤）"]
+  },
+  {
+    name: "躁狂抑郁症",
+    formulas: ["四木开井阵","大离火阵"]
+  },
+  {
+    name: "神经衰弱",
+    formulas: ["少阴离合阵（调神）"]
+  },
+  {
+    name: "肾虚失眠",
+    formulas: ["小天心阵（潜阳）"]
+  },
+  {
+    name: "梅核气",
+    formulas: ["一字通天阵","冲关夺门阵"]
+  },
+  {
+    name: "胃食管反流",
+    formulas: ["冲关夺门阵","四关八定阵（四木加合谷内关）"]
+  },
+  {
+    name: "急性惊恐发作",
+    formulas: ["无可奈何阵（厉兑）","木火通明阵"]
+  }
+];
+
+let currentFilter = 'all';
+let searchTerm = '';
+
+function renderCards() {
+  const container = document.getElementById('cardsContainer');
+  let html = '';
+  const categories = { '心':[], '肾':[], '肝':[], '脾':[] };
+
+  cards.forEach(c => {
+    const matchFilter = currentFilter === 'all' || 
+      c.tags.includes(currentFilter) || 
+      c.category === currentFilter;
+    const matchSearch = !searchTerm || 
+      c.name.includes(searchTerm) || 
+      c.acupoints.some(a => a.includes(searchTerm)) ||
+      (c.acupointDetails || []).some(d => d.includes(searchTerm)) ||
+      c.tags.some(t => t.includes(searchTerm)) ||
+      (c.formulaDetail || '').includes(searchTerm) ||
+      (c.classic || '').includes(searchTerm) ||
+      (c.combos || []).some(cb => cb.includes(searchTerm)) ||
+      (c.indications || []).some(i => i.includes(searchTerm)) ||
+      (c.notes || '').includes(searchTerm);
+    
+    if (matchFilter && matchSearch) {
+      if (!categories[c.category]) categories[c.category] = [];
+      categories[c.category].push(c);
+    }
+  });
+
+  const catNames = { '心':'心系', '肾':'肾系', '肝':'肝系', '脾':'脾系' };
+  for (const [cat, items] of Object.entries(categories)) {
+    if (items.length === 0) continue;
+    html += `<div class="category-title">${catNames[cat]}</div>`;
+    items.forEach(c => {
+      html += renderCard(c);
+    });
+  }
+
+  // 疾病配阵
+  if (currentFilter === 'all' || currentFilter === '安神' || currentFilter === '调神' || currentFilter === '解郁') {
+    const matchedDiseases = diseases.filter(d => {
+      if (currentFilter === 'all' && !searchTerm) return true;
+      const matchFilter = currentFilter === 'all' || 
+        d.formulas.some(f => f.includes(currentFilter));
+      const matchSearch = !searchTerm || 
+        d.name.includes(searchTerm) ||
+        d.formulas.some(f => f.includes(searchTerm));
+      return matchFilter && matchSearch;
+    });
+    if (matchedDiseases.length > 0) {
+      html += `<div class="category-title">疾病配阵方案</div>`;
+      matchedDiseases.forEach(d => {
+        html += `<div class="disease-section">
+          <h3>${highlight(d.name)}</h3>
+          <div class="disease-formula">
+            ${d.formulas.map(f => `<span class="disease-tag">${highlight(f)}</span>`).join('')}
+          </div>
+        </div>`;
+      });
+    }
+  }
+
+  if (html === '') {
+    html = '<div class="no-result">未找到匹配的针阵或疾病方案</div>';
+  }
+  container.innerHTML = html;
+}
+
+function renderCard(c) {
+  return `<div class="card">
+    <div class="card-header">
+      <span class="icon">${c.category === '心' ? '❤️' : c.category === '肾' ? '💧' : c.category === '肝' ? '🌿' : '🏔️'}</span>
+      <h2>${highlight(c.name)}</h2>
+    </div>
+    <div class="card-tags">
+      ${c.tags.map(t => `<span class="tag tag-${t === '安神' ? 'acupoint' : t === '温阳' ? 'formula' : t === '镇惊' ? 'disease' : t === '解郁' ? 'classic' : 'zangfu'}">${highlight(t)}</span>`).join('')}
+    </div>
+    <div class="acupoint-list">
+      ${c.acupoints.map(a => `<span class="acupoint">${highlight(a)}</span>`).join(' ')}
+    </div>
+    ${(c.acupointDetails || []).length > 0 ? `
+    <div class="section" style="background:#f1f8e9; margin-top:8px;">
+      <div class="section-label">穴位详解</div>
+      ${c.acupointDetails.map(d => `<div class="detail-item">${highlight(d)}</div>`).join('')}
+    </div>` : ''}
+    ${c.formulaDetail ? `
+    <div class="section section-formula" style="margin-top:8px;">
+      <div class="section-label">方义</div>
+      <div class="detail-item">${highlight(c.formulaDetail)}</div>
+    </div>` : ''}
+    ${c.classic ? `
+    <div class="section section-classic" style="margin-top:8px;">
+      <div class="section-label">经典</div>
+      <div class="detail-item" style="font-style:italic;">${highlight(c.classic)}</div>
+    </div>` : ''}
+    ${(c.combos || []).length > 0 ? `
+    <div class="section section-combo" style="margin-top:8px;">
+      <div class="section-label">配伍</div>
+      ${c.combos.map(cb => `<div class="detail-item">${highlight(cb)}</div>`).join('')}
+    </div>` : ''}
+    ${c.notes ? `<div class="detail-item" style="margin-top:8px; color:#666;">${highlight(c.notes)}</div>` : ''}
+  </div>`;
+}
+
+function highlight(text) {
+  if (!searchTerm) return text;
+  const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`(${escaped})`, 'gi');
+  return text.replace(re, '<span class="highlight">$1</span>');
+}
+
+function filterCards() {
+  searchTerm = document.getElementById('searchInput').value.trim();
+  renderCards();
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCards();
+}
+
+renderCards();
+</script>
+
+</body>
+</html>
