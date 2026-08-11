@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>心源动力训练 · 发愿·忏悔·持咒</title>
+<style>
+  :root{
+    --paper:#f6efe0;
+    --card:#fffdf6;
+    --ink:#3f3428;
+    --ink-soft:#6b5b48;
+    --gold:#b98a2f;
+    --gold-deep:#8f6a1e;
+    --red:#a63d2c;
+    --red-deep:#8c2f20;
+    --jade:#3e6f63;
+    --line:#e4d6ba;
+    --shadow:0 10px 30px rgba(120,90,40,.10);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"KaiTi","STKaiti","楷体","SimSun","宋体",serif;
+    background:
+      radial-gradient(1200px 500px at 50% -100px, rgba(185,138,47,.14), transparent 60%),
+      radial-gradient(900px 400px at 90% 30%, rgba(166,61,44,.05), transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+  }
+
+  /* ===== 顶部 ===== */
+  .hero{
+    text-align:center;
+    padding:52px 20px 30px;
+    position:relative;
+  }
+  .hero .lotus{
+    width:86px;height:86px;margin:0 auto 10px;
+    display:block;
+  }
+  .hero h1{
+    font-size:44px;letter-spacing:14px;
+    color:var(--red-deep);
+    font-weight:700;
+    text-shadow:0 1px 0 rgba(255,255,255,.6);
+  }
+  .hero .sub{
+    margin-top:12px;font-size:19px;letter-spacing:6px;color:var(--gold-deep);
+  }
+  .hero .flow{
+    margin-top:14px;font-size:15px;letter-spacing:2px;color:var(--ink-soft);
+  }
+  .hero .flow b{color:var(--red);font-weight:600}
+  .voice-tip{
+    margin:18px auto 0;max-width:560px;
+    font-size:13px;color:var(--ink-soft);
+    background:rgba(185,138,47,.10);
+    border:1px dashed var(--gold);
+    border-radius:8px;padding:8px 14px;
+    display:none;
+  }
+  .voice-tip.warn-red{
+    background:rgba(166,61,44,.12);
+    border:1px solid var(--red);
+    color:var(--red-deep);
+    font-weight:700;
+    line-height:1.7;
+  }
+
+  /* ===== 全局朗读全部控制条 ===== */
+  .hero-ctrl{
+    margin:24px auto 0;max-width:640px;
+    display:flex;align-items:center;justify-content:center;
+    gap:12px;flex-wrap:wrap;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:10px 20px;
+    box-shadow:var(--shadow);
+  }
+  .hero-ctrl .btn{flex:none}
+  .btn-all{background:var(--red-deep);font-size:16px;padding:10px 24px}
+  .all-status{
+    font-size:13px;color:var(--ink-soft);letter-spacing:1px;
+    min-width:150px;text-align:left;
+  }
+
+  /* ===== 板块 ===== */
+  main{max-width:880px;margin:0 auto;padding:10px 18px 80px}
+  .section-title{
+    display:flex;align-items:center;gap:14px;
+    margin:34px 0 18px;
+  }
+  .section-title .num{
+    flex:none;width:46px;height:46px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:20px;font-weight:700;
+    box-shadow:var(--shadow);
+  }
+  .section-title h2{font-size:26px;letter-spacing:6px}
+  .section-title .line{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+
+  /* ===== 卡片 ===== */
+  .item{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    margin:18px 0;
+    overflow:hidden;
+  }
+  .item-head{
+    display:flex;align-items:center;gap:10px;
+    padding:14px 20px;
+    background:linear-gradient(180deg,rgba(185,138,47,.07),transparent);
+    border-bottom:1px solid var(--line);
+  }
+  .item-head .badge{
+    flex:none;min-width:30px;height:30px;padding:0 4px;
+    border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-size:14px;color:#fff;font-weight:700;
+  }
+  .item-head h3{flex:1;font-size:21px;letter-spacing:3px;color:var(--ink)}
+  .item-head .count{font-size:12px;color:var(--ink-soft);letter-spacing:1px}
+
+  .lines{padding:16px 22px 6px}
+  .line{
+    position:relative;
+    font-size:18px;line-height:2.1;letter-spacing:1px;
+    padding:3px 12px 3px 18px;
+    border-radius:8px;
+    transition:background .25s, color .25s;
+  }
+  .line .note{
+    font-size:13px;color:var(--ink-soft);
+    margin-left:10px;letter-spacing:0;
+    opacity:.85;
+  }
+  .line.done{color:#8a6d3b}
+  .line.speaking{
+    background:linear-gradient(90deg,rgba(185,138,47,.22),rgba(185,138,47,.06));
+    color:var(--red-deep);
+    font-weight:700;
+  }
+  .line.speaking::before{
+    content:"";position:absolute;left:2px;top:18%;bottom:18%;
+    width:4px;border-radius:2px;
+    background:var(--gold);
+  }
+  .line.speaking .note{color:var(--ink-soft)}
+
+  /* ===== 控制条 ===== */
+  .ctrl{
+    display:flex;align-items:center;gap:12px;
+    padding:12px 20px 16px;
+    flex-wrap:wrap;
+  }
+  .btn{
+    border:none;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:inherit;
+    font-size:15px;letter-spacing:2px;
+    padding:8px 18px;border-radius:999px;
+    transition:transform .15s, box-shadow .15s, opacity .15s;
+    color:#fff;
+    white-space:nowrap;
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,.15)}
+  .btn:active{transform:translateY(0)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+  .btn-play{background:var(--red)}
+  .btn-pause{background:var(--gold-deep)}
+  .btn-stop{background:#9a8f7c}
+  .btn-loop{
+    background:transparent;color:#8a7d63;
+    border:1.5px solid #c4b698;
+  }
+  .btn-loop.on{
+    background:var(--gold-deep);color:#fff;border-color:var(--gold-deep);
+  }
+  .btn-loop svg{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .btn svg{width:15px;height:15px;fill:currentColor}
+
+  .ctrl .status{
+    flex:1;min-width:120px;
+    font-size:13px;color:var(--ink-soft);letter-spacing:1px;
+  }
+  .ctrl .rate{
+    font-size:13px;color:var(--ink-soft);
+    display:flex;align-items:center;gap:6px;
+  }
+  .ctrl select{
+    font-family:inherit;font-size:13px;
+    border:1px solid var(--line);border-radius:6px;
+    padding:3px 6px;color:var(--ink);background:#fff;
+  }
+
+  /* ===== 底部 ===== */
+  footer{
+    text-align:center;color:var(--ink-soft);
+    font-size:13px;letter-spacing:2px;
+    padding:20px 16px 40px;
+    border-top:1px solid var(--line);
+  }
+
+  /* ===== 移动端全局优化 ===== */
+  html{-webkit-text-size-adjust:100%}
+  body{-webkit-tap-highlight-color:transparent}
+  .btn{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+
+  @media (max-width:700px){
+    main{padding:6px 12px 96px}
+  }
+
+  @media (max-width:560px){
+    .hero{padding:34px 14px 16px}
+    .hero .lotus{width:62px;height:62px}
+    .hero h1{font-size:30px;letter-spacing:8px}
+    .hero .sub{font-size:15px;letter-spacing:3px}
+    .hero .flow{font-size:14px;letter-spacing:1px}
+    .voice-tip{margin:14px auto 0;font-size:12px;padding:7px 12px}
+
+    /* 全局控制条：手机改为圆角卡片 + 三按钮等宽一行，状态文字独立一行 */
+    .hero-ctrl{
+      max-width:none;width:100%;
+      border-radius:16px;padding:12px;
+      gap:8px;
+    }
+    .hero-ctrl .btn{flex:1;justify-content:center;min-height:44px}
+    .btn-all{font-size:15px;padding:10px 8px}
+    .all-status{
+      flex-basis:100%;min-width:0;order:99;
+      text-align:center;font-size:12px;letter-spacing:.5px;
+      line-height:1.6;
+    }
+
+    .section-title{margin:26px 0 12px;gap:10px}
+    .section-title .num{width:38px;height:38px;font-size:17px}
+    .section-title h2{font-size:21px;letter-spacing:4px}
+
+    .item{border-radius:14px;margin:12px 0}
+    .item-head{padding:12px 14px;gap:8px}
+    .item-head .badge{min-width:26px;height:26px;font-size:13px}
+    .item-head h3{font-size:17px;letter-spacing:1px}
+    .item-head .count{font-size:11px}
+
+    .lines{padding:12px 12px 4px}
+    .line{font-size:16px;line-height:2.05;letter-spacing:.5px;padding:3px 8px 3px 14px}
+    .line .note{font-size:12px;margin-left:6px}
+
+    /* 卡片控制条：三按钮一行，状态与语速换行居中 */
+    .ctrl{padding:10px 12px 14px;gap:8px}
+    .ctrl .btn{flex:1;justify-content:center;min-height:42px}
+    .btn{padding:9px 14px;font-size:14px;letter-spacing:1px}
+    .btn svg{width:14px;height:14px}
+    .ctrl .status{
+      flex-basis:100%;min-width:0;order:2;
+      text-align:center;font-size:12px;
+    }
+    .ctrl .rate{
+      flex-basis:100%;justify-content:center;order:3;
+      font-size:12px;gap:8px;margin-top:2px;
+    }
+    .ctrl select{font-size:13px;min-height:30px;padding:2px 8px}
+
+    footer{
+      padding:16px 12px calc(26px + env(safe-area-inset-bottom));
+      font-size:12px;letter-spacing:1px;
+    }
+  }
+
+  @media (max-width:380px){
+    .hero h1{font-size:26px;letter-spacing:6px}
+    .hero .sub{font-size:14px;letter-spacing:2px}
+    .line{font-size:15px;line-height:2}
+    .item-head h3{font-size:16px}
+    .btn{padding:8px 10px}
+    .btn-all{font-size:14px;padding:10px 6px;letter-spacing:0}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <svg class="lotus" viewBox="0 0 120 120" aria-hidden="true">
+    <circle cx="60" cy="60" r="54" fill="none" stroke="#c9a227" stroke-width="1" opacity=".45"/>
+    <circle cx="60" cy="60" r="44" fill="none" stroke="#c9a227" stroke-width="1" opacity=".35"/>
+    <g fill="none" stroke="#b98a2f" stroke-width="2.4" stroke-linecap="round">
+      <ellipse cx="60" cy="58" rx="15" ry="32"/>
+      <ellipse cx="60" cy="58" rx="15" ry="32" transform="rotate(34 60 58)"/>
+      <ellipse cx="60" cy="58" rx="15" ry="32" transform="rotate(-34 60 58)"/>
+      <ellipse cx="60" cy="58" rx="12" ry="26" transform="rotate(68 60 58)" opacity=".7"/>
+      <ellipse cx="60" cy="58" rx="12" ry="26" transform="rotate(-68 60 58)" opacity=".7"/>
+    </g>
+    <circle cx="60" cy="58" r="6" fill="#c9a227"/>
+    <path d="M36 96 Q60 86 84 96" fill="none" stroke="#8f6a1e" stroke-width="2" stroke-linecap="round"/>
+    <path d="M44 100 Q60 93 76 100" fill="none" stroke="#8f6a1e" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>
+  </svg>
+  <h1>心源动力训练</h1>
+  <div class="sub">明理 ——→ 实操</div>
+  <div class="flow">先<b>发愿</b> · 后<b>忏悔</b> · 再<b>持咒</b></div>
+  <div class="hero-ctrl">
+    <button class="btn btn-all" id="btnAllPlay">
+      <svg viewBox="0 0 16 16"><path d="M4 2l9 6-9 6z"/></svg><span>朗读全部</span>
+    </button>
+    <button class="btn btn-pause" id="btnAllPause" disabled>
+      <svg viewBox="0 0 16 16"><path d="M4 2h3v12H4zM9 2h3v12H9z"/></svg><span>暂停</span>
+    </button>
+    <button class="btn btn-stop" id="btnAllStop" disabled>
+      <svg viewBox="0 0 16 16"><rect x="3" y="3" width="10" height="10" rx="1"/></svg><span>停止</span>
+    </button>
+    <button class="btn btn-loop" id="btnAllLoop">
+      <svg viewBox="0 0 16 16"><path d="M13.6 8a5.6 5.6 0 1 1-1.7-4"/><path d="M13.6 2.4v3h-3"/></svg><span>循环</span>
+    </button>
+    <span class="all-status" id="allStatus">点击按钮，从「发愿」到「金光咒」依次朗读全部 13 篇</span>
+  </div>
+  <div class="voice-tip" id="voiceTip"></div>
+</header>
+
+<main id="app"></main>
+
+<footer>心源动力训练 · 静心诵读 · 愿力无穷</footer>
+
+<script>
+const AUDIO_BASE = "https://liguanglei123.github.io/wumen-zhenzhen/tts/";
+/* ================= 内容数据 ================= */
+const DATA = [
+  {
+    name:"发愿", num:"一", color:"#a63d2c", cn:"愿",
+    items:[
+      { title:"发愿 · 吴师简化版", lines:["一轮明月清如镜，万丈金光照吾身。"] },
+      { title:"发愿 · 吴老师自用发愿文", lines:["不离法界，遍入尘劳；","虚空有尽，我愿无穷。"] },
+      { title:"观世音菩萨发愿偈", lines:[
+        "稽首皈依大悲主，愿力宏深相好身。千臂庄严普护持，千眼光明遍观照。",
+        "真实语中宣密语，无为心内起悲心。速令满足诸希求，永使灭除诸罪障。",
+        "龙天众圣同慈护，百千三昧顿熏修。受持身是光明幢，受持心是神通藏。",
+        "洗涤尘劳愿济海，超证菩提方便门。我今称诵誓皈依，所愿从心悉圆满。",
+        "南无大悲观世音，愿我速知一切法！南无大悲观世音，愿我早得智慧眼！",
+        "南无大悲观世音，愿我速度一切众！南无大悲观世音，愿我早得善方便！",
+        "南无大悲观世音，愿我速乘般若船！南无大悲观世音，愿我早得越苦海！",
+        "南无大悲观世音，愿我速得戒定道！南无大悲观世音，愿我早登涅槃山！",
+        "南无大悲观世音，愿我速会无为舍！南无大悲观世音，愿我早同法性身！",
+        "我若向刀山，刀山自摧折！我若向火汤，火汤自枯竭！",
+        "我若向地狱，地狱自消灭！我若向饿鬼，饿鬼自饱满！",
+        "我若向修罗，恶心自调伏！我若向畜生，自得大智慧！"
+      ]}
+    ]
+  },
+  {
+    name:"忏悔", num:"二", color:"#3e6f63", cn:"悔",
+    items:[
+      { title:"忏悔 · 吴师版", lines:[
+        "从无始劫以来，无论过去、现在、还是未来，因身口意的造作，被我伤害过的因缘众生，或因身口意的造作，所招感的诸多苦难，不论心身，我皆愿意接受业果，并诚挚忏悔。",
+        "因为无明，彼此伤害，冤冤相报，枉受诸苦，无有出期。",
+        "愿一切被我伤害过的众生无身心痛苦、出离苦海。",
+        "愿一切与我有缘的非人众生，早生极乐。",
+        "并将我的善业功德分享一切众生。"
+      ]},
+      { title:"忏悔 · 药师忏文", lines:[
+        "弟子某甲，自违真性，枉入迷流，随生死以飘沉，逐色声而贪染。",
+        "十缠十使，积成有漏之因；六根六尘，妄作无边之罪。",
+        "迷沦苦海，深溺邪途，著我耽人，举枉措直，累生业障，一切愆尤，仰三宝以慈悲，沥一心而忏悔。",
+        "所愿能仁拯拔，善友提携，出烦恼之深渊，到菩提之彼岸。",
+        "此世福基命位，各愿昌隆；来生智种灵苗，同希增秀。",
+        "生逢中国，长遇明师，正信出家，童真入道。六根通利，三业纯和。不染世缘，常修梵行。",
+        "执持禁戒，尘业不侵。严护威仪，蜎飞无损。不逢八难，不缺四缘。",
+        "般若智以现前，菩提心而不退。修习正法，了悟大乘。开六度之行门，越三祗之劫海。",
+        "建法幢于处处，破疑网于重重。降伏众魔，绍隆三宝。",
+        "承事十方诸佛，无有疲劳。修学一切法门，悉皆通达。广作福慧，普利尘沙，得六种之神通，圆一生之佛果。",
+        "然后不舍法界，遍入尘劳。等观音之慈心，行普贤之愿海。",
+        "他方此界，逐类随形，应现色身，演扬妙法。泥犁苦趣，饿鬼道中，或放大光明，或现诸神变。",
+        "其有见我相，乃至闻我名，皆发菩提心，永出轮回苦。",
+        "火鑊冰河之地，变作香林。饮铜食铁之徒，化生净土。",
+        "披毛戴角，负债含怨，尽罢辛酸，咸沾利乐。",
+        "疾疫世而现为药草，救疗沉疴。饥馑时而化作稻粱，济诸贫馁。但有利益，无不兴崇。",
+        "次期累世冤亲，现存眷属，出四生之汨没，舍万劫之爱缠，共与含生，齐成佛道，虚空有尽，我愿无穷，情与无情，同圆种智。"
+      ]},
+      { title:"忏悔 · 普贤忏悔偈", lines:[
+        "往昔所造诸恶业，皆由无始贪嗔痴，从身语意之所生，一切我今皆忏悔。"
+      ]}
+    ]
+  },
+  {
+    name:"持咒", num:"三", color:"#8f6a1e", cn:"咒",
+    items:[
+      { title:"六字大明咒", lines:["唵（ong）嘛（ma）呢（ni）叭（bei）咪（mei）吽（hong）"] },
+      { title:"般若波罗蜜多咒", lines:[
+        "故知般若波罗蜜多咒、是大神咒、是大明咒、是无上咒、是无等等咒。",
+        "能除一切苦、真实不虚。故说般若波罗蜜多咒。即说咒曰：揭谛揭谛，波罗揭谛，波罗僧揭谛，菩提萨婆诃。",
+        { text:"揭谛揭谛", note:"去呀去呀" },
+        { text:"波罗揭谛", note:"去到彼岸" },
+        { text:"波罗僧揭谛", note:"我去往彼岸（小乘）" },
+        { text:"菩提萨婆诃", note:"带领众生共达彼岸（大乘）" }
+      ]},
+      { title:"大悲咒", lines:[
+        "南无喝罗怛那，哆罗夜耶，南无阿唎耶，婆卢羯帝，烁钵罗耶，菩提萨埵婆耶，",
+        "摩诃萨埵婆耶，摩诃迦卢尼迦耶。唵！萨皤罗罚曳，数怛那怛写，",
+        "南无悉吉栗埵，伊蒙阿唎耶，婆卢吉帝，室佛罗愣驮婆，",
+        "南无那罗谨墀，酰利摩诃，皤哆沙咩，萨婆阿他豆输朋，阿逝孕，",
+        "萨婆萨多，那摩婆萨多，那摩婆伽，摩罚特豆。怛侄他，唵！阿婆卢酰，",
+        "卢迦帝，迦罗帝，夷酰唎，摩诃菩提萨埵。",
+        "萨婆萨婆，摩罗摩罗，摩酰摩酰，唎驮孕，",
+        "俱卢俱卢羯蒙，度卢度卢，罚阇耶帝，摩诃罚阇耶帝。",
+        "陀罗陀罗，地唎尼，室佛罗耶。遮罗遮罗，摩么罚摩罗。",
+        "穆帝隶，伊酰伊酰，室那室那，阿罗参，佛罗舍利。",
+        "罚沙罚参，佛罗舍耶，呼嚧呼嚧摩罗，呼嚧呼嚧酰利。",
+        "娑罗娑罗，悉唎悉唎，苏嚧苏嚧，菩提夜菩提夜，菩驮夜菩驮夜。",
+        "弥帝唎夜，那罗谨墀，地利瑟尼那。",
+        "波夜摩那，娑婆诃；悉陀夜，娑婆诃；摩诃悉陀夜，娑婆诃；",
+        "悉陀喻艺，室皤罗耶，娑婆诃；那罗谨墀，娑婆诃；摩罗那罗，娑婆诃；",
+        "悉罗僧阿穆佉耶；娑婆诃；娑婆摩诃阿悉陀夜，娑婆诃；",
+        "者吉罗阿悉陀夜，娑婆诃；波陀摩羯悉陀夜，娑婆诃；",
+        "那罗谨墀皤伽罗耶，娑婆诃；摩婆利胜羯罗夜，娑婆诃。",
+        "南无喝罗怛那哆罗夜耶，南无阿唎耶，婆嚧吉帝，烁皤罗夜，娑婆诃。",
+        "唵！悉殿都，漫多罗，跋陀耶，娑婆诃。"
+      ]},
+      { title:"准提咒", lines:[
+        "（稽首皈依苏悉帝，头面顶礼七俱胝，我今称赞大准提，唯愿慈悲垂加护。）",
+        "南无飒哆喃。三藐三菩陀。俱胝喃。怛侄他。",
+        "唵。折戾主戾。准提娑婆诃。"
+      ]},
+      { title:"药师佛心咒（注音）", lines:[
+        "喋（de）雅（ya）他（ta），嗡（ong），贝（bei）堪（kan）则（je）贝（bei）堪（kan）则（je），玛（ma）哈（ha）贝（bei）堪（kan）则（je），",
+        "拉（la）杂（za）萨（sa）目（mur），嘎（ga）喋（de）梭（so）哈（ha）。"
+      ]},
+      { title:"药师佛咒", lines:[
+        "那谟薄伽筏帝，裨杀社窭噜，薛琉璃钵剌婆喝啰阇也，",
+        "怛陀揭多耶，阿罗诃帝，三藐三勃陀耶。",
+        "怛侄阤：唵，鞞杀逝，鞞杀逝，鞞杀社，三没揭帝娑诃。"
+      ]},
+      { title:"金光咒", lines:[
+        "天地玄宗，万炁本根。广修亿劫，证吾神通。",
+        "三界内外，惟道独尊。体有金光，覆映吾身。",
+        "视之不见，听之不闻。包罗天地，养育群生。",
+        "受持万遍，身有光明。三界侍卫，五帝司迎。",
+        "万神朝礼，役使雷霆，鬼妖丧胆，精怪亡形。",
+        "内有霹雳，雷神隐名。洞慧交彻，五炁腾腾。",
+        "金光速现，覆护真人。急急如律令。"
+      ]}
+    ]
+  }
+];
+
+/* ================= 状态 ================= */
+const state = { card:null, idx:0, paused:false, playing:false, rate:1 };
+
+/* ================= 渲染 ================= */
+const app = document.getElementById("app");
+let cardId = 0;
+let lineIdx = 0;
+DATA.forEach(sec => {
+  const st = document.createElement("div");
+  st.className = "section-title";
+  st.innerHTML = `
+    <span class="num" style="background:${sec.color}">${sec.num}</span>
+    <h2>${sec.name}</h2>
+    <span class="line"></span>`;
+  app.appendChild(st);
+
+  sec.items.forEach(item => {
+    const id = "card-" + (cardId++);
+    const card = document.createElement("div");
+    card.className = "item";
+    card.id = id;
+    // 整段播放：般若波罗蜜多咒(040) / 大悲咒(045) 播放完整梵音唱诵，不逐句朗读
+    if (item.title === "般若波罗蜜多咒"){ card.dataset.whole = "1"; card.dataset.wholeSrc = "040"; }
+    else if (item.title === "大悲咒"){ card.dataset.whole = "1"; card.dataset.wholeSrc = "045"; }
+    const linesHtml = item.lines.map(l => {
+      const ai = lineIdx++;
+      if (typeof l === "object") {
+        return `<p class="line" data-audio="${ai}" data-speak="${l.text.replace(/"/g,'&quot;')}">${l.text}<span class="note">${l.note}</span></p>`;
+      }
+      return `<p class="line" data-audio="${ai}" data-speak="${l.replace(/"/g,'&quot;')}">${l}</p>`;
+    }).join("");
+    card.innerHTML = `
+      <div class="item-head">
+        <span class="badge" style="background:${sec.color}">${sec.cn}</span>
+        <h3>${item.title}</h3>
+        <span class="count">共 ${item.lines.length} 句</span>
+      </div>
+      <div class="lines">${linesHtml}</div>
+      <div class="ctrl">
+        <button class="btn btn-play" data-id="${id}">
+          <svg viewBox="0 0 16 16"><path d="M4 2l9 6-9 6z"/></svg><span>朗读</span>
+        </button>
+        <button class="btn btn-pause" data-id="${id}" disabled>
+          <svg viewBox="0 0 16 16"><path d="M4 2h3v12H4zM9 2h3v12H9z"/></svg><span>暂停</span>
+        </button>
+        <button class="btn btn-stop" data-id="${id}" disabled>
+          <svg viewBox="0 0 16 16"><rect x="3" y="3" width="10" height="10" rx="1"/></svg><span>停止</span>
+        </button>
+        <button class="btn btn-loop" data-id="${id}">
+          <svg viewBox="0 0 16 16"><path d="M13.6 8a5.6 5.6 0 1 1-1.7-4"/><path d="M13.6 2.4v3h-3"/></svg><span>循环</span>
+        </button>
+        <span class="status">待朗读</span>
+        <label class="rate">语速
+          <select>
+            <option value="0.8">慢</option>
+            <option value="1" selected>常</option>
+            <option value="1.25">快</option>
+          </select>
+        </label>
+      </div>`;
+    app.appendChild(card);
+  });
+});
+
+/* ================= 播放控制 ================= */
+let active = null;   // 当前正在朗读的卡片 {card}
+let allMode = false; // 是否处于"朗读全部"模式
+let allQueue = [];   // 待朗读的卡片 id 队列
+let allLoop = false; // 顶部"朗读全部"是否循环整组
+
+function findCard(id){ return document.getElementById(id); }
+function segsOf(card){ return Array.from(card.querySelectorAll(".line")); }
+function setBtn(card, name, disabled, label){
+  const b = card.querySelector(".btn-" + name);
+  b.disabled = disabled;
+  b.querySelector("span").textContent = label;
+}
+function setStatus(card, text){ card.querySelector(".status").textContent = text; }
+function setAllStatus(text){ document.getElementById("allStatus").textContent = text; }
+
+function clearHighlight(card, keepDone){
+  segsOf(card).forEach(s => {
+    s.classList.remove("speaking");
+    if(!keepDone) s.classList.remove("done");
+  });
+}
+function resetCard(card){
+  clearHighlight(card, false);
+  setBtn(card, "play", false, "朗读");
+  setBtn(card, "pause", true, "暂停");
+  setBtn(card, "stop", true, "停止");
+  setStatus(card, "待朗读");
+}
+function resetAllCards(){
+  document.querySelectorAll(".item").forEach(resetCard);
+}
+
+/* 全局控制条 UI 同步 */
+function setAllCtrl(){
+  const playing = state.playing && !!active;
+  const btnPlay = document.getElementById("btnAllPlay");
+  const btnPause = document.getElementById("btnAllPause");
+  const btnStop = document.getElementById("btnAllStop");
+  const btnLoop = document.getElementById("btnAllLoop");
+  // 顶部循环按钮：始终显示当前开关状态（金色 = 循环全部）
+  btnLoop.classList.toggle("on", allLoop);
+  btnLoop.querySelector("span").textContent = allLoop ? "循环中" : "循环";
+  if (playing){
+    btnPlay.disabled = true;
+    btnPlay.querySelector("span").textContent = "朗读中";
+    btnPause.disabled = false;
+    btnPause.querySelector("span").textContent = state.paused ? "继续" : "暂停";
+    btnStop.disabled = false;
+  } else {
+    btnPlay.disabled = false;
+    btnPlay.querySelector("span").textContent = "朗读全部";
+    btnPause.disabled = true;
+    btnPause.querySelector("span").textContent = "暂停";
+    btnStop.disabled = true;
+  }
+}
+
+/* 切换"朗读全部"循环开关 */
+function toggleAllLoop(){
+  allLoop = !allLoop;
+  const btn = document.getElementById("btnAllLoop");
+  btn.classList.toggle("on", allLoop);
+  btn.querySelector("span").textContent = allLoop ? "循环中" : "循环";
+  if (!state.playing){
+    setAllStatus(allLoop ? "已开启全部循环：13 篇读完将自动从头重播" : "点击按钮，从「发愿」到「金光咒」依次朗读全部 13 篇");
+  }
+}
+
+/* 停止一切并复位全部卡片 */
+function stopAll(){
+  clearTimeout(ttsTimer);
+  if (currentAudio){ currentAudio.pause(); currentAudio = null; }
+  resetAllCards();
+  active = null;
+  allMode = false; allQueue = [];
+  state.paused = false; state.playing = false; state.idx = 0;
+  setAllCtrl();
+  setAllStatus("点击按钮，从「发愿」到「金光咒」依次朗读全部 13 篇");
+}
+
+function highlight(card, idx, total){
+  segsOf(card).forEach((s,i) => {
+    s.classList.remove("speaking");
+    if (i < idx) s.classList.add("done");
+  });
+  const cur = segsOf(card)[idx];
+  if (cur){
+    cur.classList.add("speaking");
+    cur.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+  setStatus(card, `正在朗读 ${idx+1} / ${total}`);
+}
+
+/* ---- 音频播放引擎（内嵌 MP3，微信 / 手机均可用） ---- */
+let ttsTimer = null;
+let currentAudio = null; // 当前播放中的 Audio 对象
+
+function preCheckTTS(card){
+  if (typeof Audio === "undefined"){
+    warnAndStop(card, "当前浏览器不支持音频播放，请使用较新版本的浏览器打开。");
+    return false;
+  }
+  return true;
+}
+
+function warnAndStop(card, msg){
+  clearTimeout(ttsTimer);
+  if (currentAudio){ currentAudio.pause(); currentAudio = null; }
+  resetCard(card);
+  setStatus(card, "⚠ " + msg);
+  setAllStatus("⚠ " + msg);
+  const tip = document.getElementById("voiceTip");
+  tip.style.display = "block";
+  tip.textContent = "⚠ " + msg;
+  active = null; allMode = false; allQueue = [];
+  state.playing = false; state.paused = false; state.idx = 0;
+  setAllCtrl();
+}
+
+function speakNext(card){
+  clearTimeout(ttsTimer);
+  const segs = segsOf(card);
+  // 整段播放卡片（般若波罗蜜多咒）：一次播放完整梵音唱诵，不逐句朗读
+  if (card.dataset.whole === "1"){
+    playWholeCard(card);
+    return;
+  }
+  if (state.idx >= segs.length){
+    onCardDone(card);
+    return;
+  }
+  highlight(card, state.idx, segs.length);
+  const el = segs[state.idx];
+  const ai = parseInt(el.dataset.audio, 10);
+  const src = AUDIO_BASE + String(ai).padStart(3, "0") + ".mp3";
+  preloadNext(card, state.idx + 1); // 预加载下一句，减少句间卡顿
+  if (!src){
+    // 缺少该句音频：跳过继续
+    state.idx++;
+    speakNext(card);
+    return;
+  }
+  const a = new Audio(src);
+  a.playbackRate = state.rate; // 语速（慢/常/快）
+  currentAudio = a;
+  // 看门狗：依据音频时长自适应（最长 5 分钟）
+  const armWd = () => {
+    clearTimeout(ttsTimer);
+    const d = (a.duration && isFinite(a.duration)) ? a.duration : 0;
+    const limit = Math.max(60, d * 2 + 5);
+    ttsTimer = setTimeout(() => {
+      if (active && active.card === card && !state.paused && currentAudio === a){
+        warnAndStop(card, "音频播放无响应，请刷新页面重试");
+      }
+    }, limit * 1000);
+  };
+  a.onloadedmetadata = armWd;
+  a.onended = () => {
+    if (currentAudio !== a) return;
+    currentAudio = null;
+    if (!active || active.card !== card) return;
+    state.idx++;
+    if (state.paused) return;
+    speakNext(card);
+  };
+  a.onerror = () => {
+    if (currentAudio !== a) return;
+    currentAudio = null;
+    if (!active || active.card !== card || state.paused) return;
+    state.idx++;
+    speakNext(card);
+  };
+  armWd();
+  a.play().catch(() => {
+    if (currentAudio !== a) return;
+    currentAudio = null;
+    if (!active || active.card !== card || state.paused) return;
+    state.idx++;
+    speakNext(card);
+  });
+}
+
+/* 预加载下一句音频：减少句间切换的网络等待（防卡顿） */
+function preloadNext(card, nextIdx){
+  const segs = segsOf(card);
+  if (nextIdx >= segs.length) return;
+  const el = segs[nextIdx];
+  if (!el) return;
+  const ai = parseInt(el.dataset.audio, 10);
+  if (isNaN(ai)) return;
+  const src = AUDIO_BASE + String(ai).padStart(3, "0") + ".mp3";
+  const p = new Audio();
+  p.preload = "auto";
+  p.src = src;
+}
+
+/* 整段播放（般若波罗蜜多咒）：一次播放完整梵音唱诵（tts/040.mp3），不分句 */
+function playWholeCard(card){
+  const segs = segsOf(card);
+  if (state.idx >= 1){ onCardDone(card); return; }
+  // 高亮整篇
+  segs.forEach(s => s.classList.add("done"));
+  const first = segs[0];
+  if (first){
+    first.classList.add("speaking");
+    first.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+  setStatus(card, "正在播放完整唱诵");
+  const src = AUDIO_BASE + (card.dataset.wholeSrc || "040") + ".mp3";
+  const a = new Audio(src);
+  a.preload = "auto";
+  a.playbackRate = state.rate;
+  currentAudio = a;
+  const armWd = () => {
+    clearTimeout(ttsTimer);
+    const d = (a.duration && isFinite(a.duration)) ? a.duration : 0;
+    const limit = Math.max(60, d * 2 + 5);
+    ttsTimer = setTimeout(() => {
+      if (active && active.card === card && !state.paused && currentAudio === a){
+        warnAndStop(card, "音频播放无响应，请刷新页面重试");
+      }
+    }, limit * 1000);
+  };
+  a.onloadedmetadata = armWd;
+  a.onended = () => {
+    if (currentAudio !== a) return;
+    currentAudio = null;
+    if (!active || active.card !== card) return;
+    state.idx = 1;
+    if (state.paused) return;
+    speakNext(card);
+  };
+  a.onerror = () => {
+    if (currentAudio !== a) return;
+    currentAudio = null;
+    if (!active || active.card !== card || state.paused) return;
+    state.idx = 1;
+    speakNext(card);
+  };
+  armWd();
+  a.play().catch(() => {
+    if (currentAudio !== a) return;
+    currentAudio = null;
+    if (!active || active.card !== card || state.paused) return;
+    state.idx = 1;
+    speakNext(card);
+  });
+}
+
+/* 一篇朗读结束：全部模式 → 自动进入下一篇；单篇 → 循环或收尾 */
+function onCardDone(card){
+  if (allMode){
+    setAllStatus(`已完成：「${card.querySelector("h3").textContent}」`);
+    resetCard(card);
+    if (allQueue.length){
+      startCard(allQueue.shift(), true);
+    } else if (allLoop){
+      // 全部循环：13 篇读完，重新填充队列从头再播
+      allQueue = Array.from(document.querySelectorAll(".item")).map(c => c.id);
+      setAllStatus("全部 13 篇读完，开始循环重播…");
+      startCard(allQueue.shift(), true);
+    } else {
+      finishAll();
+    }
+  } else {
+    if (card.dataset.loop === "1"){
+      // 循环模式：清高亮，从第一句重头再读
+      state.idx = 0;
+      clearHighlight(card, false);
+      speakNext(card);
+    } else {
+      finish(card);
+    }
+  }
+}
+
+/* 切换循环开关 */
+function toggleLoop(id){
+  const card = findCard(id);
+  if (!card) return;
+  const on = card.dataset.loop === "1";
+  card.dataset.loop = on ? "0" : "1";
+  const btn = card.querySelector(".btn-loop");
+  btn.classList.toggle("on", !on);
+  btn.querySelector("span").textContent = on ? "循环" : "循环中";
+}
+
+function finish(card){
+  clearTimeout(ttsTimer);
+  clearHighlight(card, true);
+  setBtn(card, "play", false, "朗读");
+  setBtn(card, "pause", true, "暂停");
+  setBtn(card, "stop", true, "停止");
+  setStatus(card, "朗读完成");
+  state.playing = false; state.paused = false; state.idx = 0;
+  active = null;
+  setAllStatus("本篇朗读完成，可继续选择其他篇目或点击「朗读全部」");
+  setAllCtrl();
+}
+
+/* 朗读全部完成 */
+function finishAll(){
+  clearTimeout(ttsTimer);
+  resetAllCards();
+  active = null; allMode = false; allQueue = [];
+  state.playing = false; state.paused = false; state.idx = 0;
+  setAllStatus("全部 13 篇朗读完成");
+  setAllCtrl();
+}
+
+/* 开始朗读一篇（fromAll=true 时同时更新全局状态并滚动定位） */
+function startCard(id, fromAll){
+  const card = findCard(id);
+  if (!card) return;
+  document.querySelectorAll(".item").forEach(c => {
+    if (c !== card) resetCard(c);
+  });
+  resetCard(card);
+  active = { card };
+  state.idx = 0; state.paused = false; state.playing = true;
+  setBtn(card, "play", true, "朗读中");
+  setBtn(card, "pause", false, "暂停");
+  setBtn(card, "stop", false, "停止");
+  setStatus(card, card.dataset.whole === "1" ? "正在播放完整唱诵" : `正在朗读 1 / ${segsOf(card).length}`);
+  setAllStatus(`正在朗读：「${card.querySelector("h3").textContent}」`);
+  if (fromAll){
+    card.scrollIntoView({behavior:"smooth", block:"start"});
+  }
+  setAllCtrl();
+  speakNext(card);
+}
+
+/* 单篇播放（卡片"朗读"按钮） */
+function playCard(id){
+  const card = findCard(id);
+  if (!card) return;
+  // 正是当前朗读篇 → 暂停/继续切换
+  if (active && active.card === card && state.playing){
+    state.paused ? resumeSpeak() : pauseSpeak();
+    return;
+  }
+  // 退出全部模式，改读该篇
+  allMode = false; allQueue = [];
+  if (!preCheckTTS(card)) return;
+  startCard(id, false);
+}
+
+/* 朗读全部（顶部按钮） */
+function playAll(){
+  // 已在朗读全部 → 暂停/继续切换
+  if (allMode && active && state.playing){
+    state.paused ? resumeSpeak() : pauseSpeak();
+    return;
+  }
+  stopAll();
+  allMode = true;
+  allQueue = Array.from(document.querySelectorAll(".item")).map(c => c.id);
+  setAllStatus("准备朗读全部 …");
+  const firstCard = findCard(allQueue[0]);
+  if (!preCheckTTS(firstCard)) return;
+  startCard(allQueue.shift(), true);
+}
+
+/* 暂停 / 继续：Audio 精确暂停恢复（保留当前句进度） */
+function pauseSpeak(){
+  if (!active || !state.playing || state.paused) return;
+  state.paused = true;
+  if (currentAudio) currentAudio.pause();
+  const card = active.card;
+  setBtn(card, "pause", false, "继续");
+  const total = segsOf(card).length;
+  setStatus(card, card.dataset.whole === "1" ? "已暂停完整唱诵" : `已暂停 ${Math.min(state.idx+1, total)} / ${total}`);
+  setAllCtrl();
+}
+function resumeSpeak(){
+  if (!active || !state.playing || !state.paused) return;
+  state.paused = false;
+  const card = active.card;
+  setBtn(card, "pause", false, "暂停");
+  const total = segsOf(card).length;
+  setStatus(card, card.dataset.whole === "1" ? "继续播放完整唱诵" : `继续朗读 ${Math.min(state.idx+1, total)} / ${total}`);
+  setAllCtrl();
+  if (currentAudio){
+    // 从暂停处继续（不重读当前句）
+    currentAudio.play().catch(() => {});
+  } else {
+    speakNext(card);
+  }
+}
+function stopCard(id){
+  const card = findCard(id);
+  if (active && active.card === card){
+    stopAll();
+  } else {
+    resetCard(card);
+  }
+}
+
+/* ================= 事件绑定 ================= */
+document.addEventListener("click", (e) => {
+  const allPlay = e.target.closest("#btnAllPlay");
+  const allPause = e.target.closest("#btnAllPause");
+  const allStop = e.target.closest("#btnAllStop");
+  const allLoopBtn = e.target.closest("#btnAllLoop");
+  const play = e.target.closest(".btn-play");
+  const pause = e.target.closest(".btn-pause");
+  const stop = e.target.closest(".btn-stop");
+  const loop = e.target.closest(".btn-loop");
+  if (allPlay) { playAll(); return; }
+  if (allPause) { state.paused ? resumeSpeak() : pauseSpeak(); return; }
+  if (allStop) { stopAll(); return; }
+  if (allLoopBtn) { toggleAllLoop(); return; } // 注意：顶部循环按钮也是 .btn-loop，必须优先判断
+  if (loop) { toggleLoop(loop.dataset.id); return; }
+  if (play) playCard(play.dataset.id);
+  else if (pause) {
+    const id = pause.dataset.id || (active ? active.card.id : null);
+    if (!id) return;
+    state.paused ? resumeSpeak() : pauseSpeak();
+  }
+  else if (stop) {
+    const id = stop.dataset.id || (active ? active.card.id : null);
+    if (!id) return;
+    stopCard(id);
+  }
+});
+document.addEventListener("change", (e) => {
+  if (e.target.matches(".ctrl select")){
+    state.rate = parseFloat(e.target.value);
+  }
+});
+window.addEventListener("beforeunload", () => { if (currentAudio) currentAudio.pause(); });
+
+/* ================= 音频可用性提示 ================= */
+(function(){
+  const tip = document.getElementById("voiceTip");
+  if (typeof Audio === "undefined"){
+    tip.style.display = "block";
+    tip.textContent = "⚠ 当前浏览器不支持音频播放，请使用较新版本的浏览器打开。";
+  }
+})();
+</script>
+</body>
+</html>
