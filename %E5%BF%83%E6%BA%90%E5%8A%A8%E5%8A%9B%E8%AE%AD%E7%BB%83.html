@@ -464,9 +464,15 @@ DATA.forEach(sec => {
     const card = document.createElement("div");
     card.className = "item";
     card.id = id;
-    // 整段播放：般若波罗蜜多咒(040) / 大悲咒(045) 播放完整梵音唱诵，不逐句朗读
-    if (item.title === "般若波罗蜜多咒"){ card.dataset.whole = "1"; card.dataset.wholeSrc = "040"; }
-    else if (item.title === "大悲咒"){ card.dataset.whole = "1"; card.dataset.wholeSrc = "045"; }
+    // 整段播放：各咒语播放完整梵音唱诵，不逐句朗读
+    const wholeMap = {
+      "般若波罗蜜多咒": "040",
+      "大悲咒": "045",
+      "准提咒": "067",
+      "药师佛心咒（注音）": "068",
+      "药师佛咒": "070"
+    };
+    if (wholeMap[item.title]){ card.dataset.whole = "1"; card.dataset.wholeSrc = wholeMap[item.title]; }
     const linesHtml = item.lines.map(l => {
       const ai = lineIdx++;
       if (typeof l === "object") {
