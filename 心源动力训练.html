@@ -321,7 +321,7 @@
 
 <main id="app"></main>
 
-<footer>心源动力训练 · 静心诵读 · 愿力无穷</footer>
+<footer>心源动力训练 · 静心诵读 · 愿力无穷 · 锁屏/切后台时音频自动继续播放</footer>
 
 <script>
 const AUDIO_BASE = "https://liguanglei123.github.io/wumen-zhenzhen/tts/";
@@ -464,8 +464,15 @@ DATA.forEach(sec => {
     const card = document.createElement("div");
     card.className = "item";
     card.id = id;
-    // 般若波罗蜜多咒：整段播放完整梵音唱诵，不逐句朗读
-    if (item.title === "般若波罗蜜多咒") card.dataset.whole = "1";
+    // 整段播放：各咒语播放完整梵音唱诵，不逐句朗读
+    const wholeMap = {
+      "般若波罗蜜多咒": "040",
+      "大悲咒": "045",
+      "准提咒": "067",
+      "药师佛心咒（注音）": "068",
+      "药师佛咒": "070"
+    };
+    if (wholeMap[item.title]){ card.dataset.whole = "1"; card.dataset.wholeSrc = wholeMap[item.title]; }
     const linesHtml = item.lines.map(l => {
       const ai = lineIdx++;
       if (typeof l === "object") {
@@ -604,6 +611,29 @@ function highlight(card, idx, total){
 let ttsTimer = null;
 let currentAudio = null; // 当前播放中的 Audio 对象
 
+/* 看门狗：音频时长自适应超时检查（锁屏/切后台时不误报） */
+function armWd(card, a){
+  clearTimeout(ttsTimer);
+  const d = (a.duration && isFinite(a.duration)) ? a.duration : 0;
+  const limit = Math.max(60, d * 2 + 5);
+  ttsTimer = setTimeout(() => {
+    if (!document.hidden && active && active.card === card && !state.paused && currentAudio === a){
+      warnAndStop(card, "音频播放无响应，请刷新页面重试");
+    }
+  }, limit * 1000);
+}
+
+/* 关屏/切后台续播：回到前台时若音频被系统暂停则恢复，并重新武装看门狗 */
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (state.playing && !state.paused && active && currentAudio){
+    if (currentAudio.paused){
+      currentAudio.play().catch(() => {});
+    }
+    armWd(active.card, currentAudio);
+  }
+});
+
 function preCheckTTS(card){
   if (typeof Audio === "undefined"){
     warnAndStop(card, "当前浏览器不支持音频播放，请使用较新版本的浏览器打开。");
@@ -652,18 +682,7 @@ function speakNext(card){
   const a = new Audio(src);
   a.playbackRate = state.rate; // 语速（慢/常/快）
   currentAudio = a;
-  // 看门狗：依据音频时长自适应（最长 5 分钟）
-  const armWd = () => {
-    clearTimeout(ttsTimer);
-    const d = (a.duration && isFinite(a.duration)) ? a.duration : 0;
-    const limit = Math.max(60, d * 2 + 5);
-    ttsTimer = setTimeout(() => {
-      if (active && active.card === card && !state.paused && currentAudio === a){
-        warnAndStop(card, "音频播放无响应，请刷新页面重试");
-      }
-    }, limit * 1000);
-  };
-  a.onloadedmetadata = armWd;
+  a.onloadedmetadata = () => armWd(card, a);
   a.onended = () => {
     if (currentAudio !== a) return;
     currentAudio = null;
@@ -679,7 +698,7 @@ function speakNext(card){
     state.idx++;
     speakNext(card);
   };
-  armWd();
+  armWd(card, a);
   a.play().catch(() => {
     if (currentAudio !== a) return;
     currentAudio = null;
@@ -715,22 +734,12 @@ function playWholeCard(card){
     first.scrollIntoView({block:"nearest", behavior:"smooth"});
   }
   setStatus(card, "正在播放完整唱诵");
-  const src = AUDIO_BASE + "040.mp3";
+  const src = AUDIO_BASE + (card.dataset.wholeSrc || "040") + ".mp3";
   const a = new Audio(src);
   a.preload = "auto";
   a.playbackRate = state.rate;
   currentAudio = a;
-  const armWd = () => {
-    clearTimeout(ttsTimer);
-    const d = (a.duration && isFinite(a.duration)) ? a.duration : 0;
-    const limit = Math.max(60, d * 2 + 5);
-    ttsTimer = setTimeout(() => {
-      if (active && active.card === card && !state.paused && currentAudio === a){
-        warnAndStop(card, "音频播放无响应，请刷新页面重试");
-      }
-    }, limit * 1000);
-  };
-  a.onloadedmetadata = armWd;
+  a.onloadedmetadata = () => armWd(card, a);
   a.onended = () => {
     if (currentAudio !== a) return;
     currentAudio = null;
@@ -746,7 +755,7 @@ function playWholeCard(card){
     state.idx = 1;
     speakNext(card);
   };
-  armWd();
+  armWd(card, a);
   a.play().catch(() => {
     if (currentAudio !== a) return;
     currentAudio = null;
