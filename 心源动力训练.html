@@ -642,6 +642,7 @@ function speakNext(card){
   const el = segs[state.idx];
   const ai = parseInt(el.dataset.audio, 10);
   const src = AUDIO_BASE + String(ai).padStart(3, "0") + ".mp3";
+  preloadNext(card, state.idx + 1); // 预加载下一句，减少句间卡顿
   if (!src){
     // 缺少该句音频：跳过继续
     state.idx++;
@@ -688,6 +689,20 @@ function speakNext(card){
   });
 }
 
+/* 预加载下一句音频：减少句间切换的网络等待（防卡顿） */
+function preloadNext(card, nextIdx){
+  const segs = segsOf(card);
+  if (nextIdx >= segs.length) return;
+  const el = segs[nextIdx];
+  if (!el) return;
+  const ai = parseInt(el.dataset.audio, 10);
+  if (isNaN(ai)) return;
+  const src = AUDIO_BASE + String(ai).padStart(3, "0") + ".mp3";
+  const p = new Audio();
+  p.preload = "auto";
+  p.src = src;
+}
+
 /* 整段播放（般若波罗蜜多咒）：一次播放完整梵音唱诵（tts/040.mp3），不分句 */
 function playWholeCard(card){
   const segs = segsOf(card);
@@ -702,6 +717,7 @@ function playWholeCard(card){
   setStatus(card, "正在播放完整唱诵");
   const src = AUDIO_BASE + "040.mp3";
   const a = new Audio(src);
+  a.preload = "auto";
   a.playbackRate = state.rate;
   currentAudio = a;
   const armWd = () => {
