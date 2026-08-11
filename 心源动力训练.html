@@ -558,6 +558,7 @@ function setAllCtrl(){
 
 /* 停止一切并复位全部卡片 */
 function stopAll(){
+  clearTimeout(ttsTimer);
   if (synth) synth.cancel();
   resetAllCards();
   active = null;
@@ -580,7 +581,59 @@ function highlight(card, idx, total){
   setStatus(card, `正在朗读 ${idx+1} / ${total}`);
 }
 
+/* ---- 语音可用性检测与兜底 ---- */
+let ttsTimer = null;
+
+function getTTSStatus(){
+  if (!synth) return {ok:false, msg:"当前浏览器不支持语音朗读，请使用 Chrome / Edge / Safari 浏览器打开。"};
+  const voices = synth.getVoices();
+  const zh = voices.filter(v => v.lang && v.lang.toLowerCase().indexOf("zh") === 0);
+  if (zh.length > 0) return {ok:true, zh};
+  if (voices.length === 0) return {ok:false, retry:true, msg:"语音引擎加载中，请稍候重试。"};
+  return {ok:false, msg:"系统缺少中文语音包：请在手机「设置 → 系统 → 语言与输入法 → 文字转语音」安装中文（普通话）语音，安装后刷新本页。"};
+}
+
+function warnAndStop(card, msg){
+  clearTimeout(ttsTimer);
+  if (synth) synth.cancel();
+  resetCard(card);
+  setStatus(card, "⚠ " + msg);
+  setAllStatus("⚠ " + msg);
+  const tip = document.getElementById("voiceTip");
+  tip.style.display = "block";
+  tip.textContent = "⚠ " + msg;
+  active = null; allMode = false; allQueue = [];
+  state.playing = false; state.paused = false; state.idx = 0;
+  setAllCtrl();
+}
+
+function preCheckTTS(card){
+  const st = getTTSStatus();
+  if (st.ok) return true;
+  if (st.retry){
+    // 语音列表在部分浏览器是异步加载的：等待最多 1.5 秒后重试
+    setStatus(card, "语音加载中…");
+    let waited = 0;
+    const timer = setInterval(() => {
+      waited += 250;
+      const st2 = getTTSStatus();
+      if (st2.ok || waited >= 1500){
+        clearInterval(timer);
+        if (st2.ok){
+          startCard(card.id, false);
+        } else {
+          warnAndStop(card, "未检测到可用语音引擎：请在手机系统设置中开启「文字转语音 / 文本朗读」并安装中文语音包，然后刷新本页重试");
+        }
+      }
+    }, 250);
+    return false;
+  }
+  warnAndStop(card, st.msg);
+  return false;
+}
+
 function speakNext(card){
+  clearTimeout(ttsTimer);
   const segs = segsOf(card);
   if (state.idx >= segs.length){
     onCardDone(card);
@@ -608,9 +661,26 @@ function speakNext(card){
   u.onerror = (e) => {
     if (e.error === "interrupted" || e.error === "canceled") return;
     if (!active || active.card !== card || state.paused) return;
+    // 明确的"语言/语音包缺失"错误 → 停止并提示
+    if (e.error === "language-unavailable"){
+      warnAndStop(card, "朗读失败：设备缺少「中文（普通话）」语音包，请在系统设置中安装后刷新重试");
+      return;
+    }
+    // 语音引擎调用失败（无引擎 / TTS 未开启 / 无音频输出）→ 停止并提示
+    if (e.error === "synthesis-failed" || e.error === "not-allowed" || e.error === "no-speech"){
+      warnAndStop(card, "朗读失败：当前设备无法调用语音引擎（可能缺少中文语音包或系统 TTS 未开启），请在系统设置中检查「文字转语音 / 文本朗读」后刷新重试");
+      return;
+    }
+    // 其他临时性错误（如 audio-busy 音频被占用）：跳过该句继续
     state.idx++;
     speakNext(card);
   };
+  // 看门狗：60 秒无任何回调 → 语音引擎无响应（部分安卓机缺语音包时会静默挂起）
+  ttsTimer = setTimeout(() => {
+    if (active && active.card === card && !state.paused){
+      warnAndStop(card, "朗读无响应：设备可能缺少语音引擎或中文语音包，请在系统设置中安装后刷新重试");
+    }
+  }, 60000);
   synth.speak(u);
 }
 
@@ -648,6 +718,7 @@ function toggleLoop(id){
 }
 
 function finish(card){
+  clearTimeout(ttsTimer);
   clearHighlight(card, true);
   setBtn(card, "play", false, "朗读");
   setBtn(card, "pause", true, "暂停");
@@ -661,6 +732,7 @@ function finish(card){
 
 /* 朗读全部完成 */
 function finishAll(){
+  clearTimeout(ttsTimer);
   resetAllCards();
   active = null; allMode = false; allQueue = [];
   state.playing = false; state.paused = false; state.idx = 0;
@@ -701,6 +773,7 @@ function playCard(id){
   }
   // 退出全部模式，改读该篇
   allMode = false; allQueue = [];
+  if (!preCheckTTS(card)) return;
   startCard(id, false);
 }
 
@@ -715,6 +788,8 @@ function playAll(){
   allMode = true;
   allQueue = Array.from(document.querySelectorAll(".item")).map(c => c.id);
   setAllStatus("准备朗读全部 …");
+  const firstCard = findCard(allQueue[0]);
+  if (!preCheckTTS(firstCard)) return;
   startCard(allQueue.shift(), true);
 }
 
@@ -782,9 +857,10 @@ window.addEventListener("beforeunload", () => { if (synth) synth.cancel(); });
 
 /* ================= 中文语音检测 ================= */
 function checkVoices(){
-  const list = synth ? synth.getVoices() : [];
-  const hasZh = list.some(v => v.lang && v.lang.toLowerCase().indexOf("zh") === 0);
-  if (!hasZh) document.getElementById("voiceTip").style.display = "block";
+  const st = getTTSStatus();
+  if (st.ok || st.retry) return; // 有中文语音，或仍在加载（加载中不做打扰提示）
+  document.getElementById("voiceTip").style.display = "block";
+  document.getElementById("voiceTip").textContent = "⚠ " + st.msg;
 }
 if (synth){
   checkVoices();
