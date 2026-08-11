@@ -61,6 +61,13 @@
     border-radius:8px;padding:8px 14px;
     display:none;
   }
+  .voice-tip.warn-red{
+    background:rgba(166,61,44,.12);
+    border:1px solid var(--red);
+    color:var(--red-deep);
+    font-weight:700;
+    line-height:1.7;
+  }
 
   /* ===== 全局朗读全部控制条 ===== */
   .hero-ctrl{
@@ -584,6 +591,19 @@ function highlight(card, idx, total){
 /* ---- 语音可用性检测与兜底 ---- */
 let ttsTimer = null;
 
+const WECHAT_TIP = "微信内置浏览器不支持网页语音朗读。请点击右上角「⋯」→「在浏览器打开」，用系统 Chrome / Safari / Edge 访问即可正常朗读。";
+
+function inWeChat(){
+  return /micromessenger/i.test(navigator.userAgent);
+}
+
+function showWeChatTip(){
+  const tip = document.getElementById("voiceTip");
+  tip.classList.add("warn-red");
+  tip.style.display = "block";
+  tip.textContent = "⚠ " + WECHAT_TIP;
+}
+
 function getTTSStatus(){
   if (!synth) return {ok:false, msg:"当前浏览器不支持语音朗读，请使用 Chrome / Edge / Safari 浏览器打开。"};
   const voices = synth.getVoices();
@@ -608,6 +628,11 @@ function warnAndStop(card, msg){
 }
 
 function preCheckTTS(card){
+  // 微信内置浏览器（X5/WKWebView）不支持网页语音合成，直接引导系统浏览器
+  if (inWeChat()){
+    warnAndStop(card, WECHAT_TIP);
+    return false;
+  }
   const st = getTTSStatus();
   if (st.ok) return true;
   if (st.retry){
@@ -862,7 +887,10 @@ function checkVoices(){
   document.getElementById("voiceTip").style.display = "block";
   document.getElementById("voiceTip").textContent = "⚠ " + st.msg;
 }
-if (synth){
+if (inWeChat()){
+  // 微信内置浏览器：直接引导到系统浏览器
+  showWeChatTip();
+} else if (synth){
   checkVoices();
   synth.onvoiceschanged = checkVoices;
 } else {
