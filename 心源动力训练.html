@@ -464,6 +464,8 @@ DATA.forEach(sec => {
     const card = document.createElement("div");
     card.className = "item";
     card.id = id;
+    // 般若波罗蜜多咒：整段播放完整梵音唱诵，不逐句朗读
+    if (item.title === "般若波罗蜜多咒") card.dataset.whole = "1";
     const linesHtml = item.lines.map(l => {
       const ai = lineIdx++;
       if (typeof l === "object") {
@@ -627,6 +629,11 @@ function warnAndStop(card, msg){
 function speakNext(card){
   clearTimeout(ttsTimer);
   const segs = segsOf(card);
+  // 整段播放卡片（般若波罗蜜多咒）：一次播放完整梵音唱诵，不逐句朗读
+  if (card.dataset.whole === "1"){
+    playWholeCard(card);
+    return;
+  }
   if (state.idx >= segs.length){
     onCardDone(card);
     return;
@@ -677,6 +684,58 @@ function speakNext(card){
     currentAudio = null;
     if (!active || active.card !== card || state.paused) return;
     state.idx++;
+    speakNext(card);
+  });
+}
+
+/* 整段播放（般若波罗蜜多咒）：一次播放完整梵音唱诵（tts/040.mp3），不分句 */
+function playWholeCard(card){
+  const segs = segsOf(card);
+  if (state.idx >= 1){ onCardDone(card); return; }
+  // 高亮整篇
+  segs.forEach(s => s.classList.add("done"));
+  const first = segs[0];
+  if (first){
+    first.classList.add("speaking");
+    first.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+  setStatus(card, "正在播放完整唱诵");
+  const src = AUDIO_BASE + "040.mp3";
+  const a = new Audio(src);
+  a.playbackRate = state.rate;
+  currentAudio = a;
+  const armWd = () => {
+    clearTimeout(ttsTimer);
+    const d = (a.duration && isFinite(a.duration)) ? a.duration : 0;
+    const limit = Math.max(60, d * 2 + 5);
+    ttsTimer = setTimeout(() => {
+      if (active && active.card === card && !state.paused && currentAudio === a){
+        warnAndStop(card, "音频播放无响应，请刷新页面重试");
+      }
+    }, limit * 1000);
+  };
+  a.onloadedmetadata = armWd;
+  a.onended = () => {
+    if (currentAudio !== a) return;
+    currentAudio = null;
+    if (!active || active.card !== card) return;
+    state.idx = 1;
+    if (state.paused) return;
+    speakNext(card);
+  };
+  a.onerror = () => {
+    if (currentAudio !== a) return;
+    currentAudio = null;
+    if (!active || active.card !== card || state.paused) return;
+    state.idx = 1;
+    speakNext(card);
+  };
+  armWd();
+  a.play().catch(() => {
+    if (currentAudio !== a) return;
+    currentAudio = null;
+    if (!active || active.card !== card || state.paused) return;
+    state.idx = 1;
     speakNext(card);
   });
 }
@@ -755,7 +814,7 @@ function startCard(id, fromAll){
   setBtn(card, "play", true, "朗读中");
   setBtn(card, "pause", false, "暂停");
   setBtn(card, "stop", false, "停止");
-  setStatus(card, `正在朗读 1 / ${segsOf(card).length}`);
+  setStatus(card, card.dataset.whole === "1" ? "正在播放完整唱诵" : `正在朗读 1 / ${segsOf(card).length}`);
   setAllStatus(`正在朗读：「${card.querySelector("h3").textContent}」`);
   if (fromAll){
     card.scrollIntoView({behavior:"smooth", block:"start"});
@@ -803,7 +862,7 @@ function pauseSpeak(){
   const card = active.card;
   setBtn(card, "pause", false, "继续");
   const total = segsOf(card).length;
-  setStatus(card, `已暂停 ${Math.min(state.idx+1, total)} / ${total}`);
+  setStatus(card, card.dataset.whole === "1" ? "已暂停完整唱诵" : `已暂停 ${Math.min(state.idx+1, total)} / ${total}`);
   setAllCtrl();
 }
 function resumeSpeak(){
@@ -812,7 +871,7 @@ function resumeSpeak(){
   const card = active.card;
   setBtn(card, "pause", false, "暂停");
   const total = segsOf(card).length;
-  setStatus(card, `继续朗读 ${Math.min(state.idx+1, total)} / ${total}`);
+  setStatus(card, card.dataset.whole === "1" ? "继续播放完整唱诵" : `继续朗读 ${Math.min(state.idx+1, total)} / ${total}`);
   setAllCtrl();
   if (currentAudio){
     // 从暂停处继续（不重读当前句）
