@@ -311,6 +311,9 @@
     <button class="btn btn-stop" id="btnAllStop" disabled>
       <svg viewBox="0 0 16 16"><rect x="3" y="3" width="10" height="10" rx="1"/></svg><span>停止</span>
     </button>
+    <button class="btn btn-loop" id="btnAllLoop">
+      <svg viewBox="0 0 16 16"><path d="M13.6 8a5.6 5.6 0 1 1-1.7-4"/><path d="M13.6 2.4v3h-3"/></svg><span>循环</span>
+    </button>
     <span class="all-status" id="allStatus">点击按钮，从「发愿」到「金光咒」依次朗读全部 13 篇</span>
   </div>
   <div class="voice-tip" id="voiceTip"></div>
@@ -505,6 +508,7 @@ DATA.forEach(sec => {
 let active = null;   // 当前正在朗读的卡片 {card}
 let allMode = false; // 是否处于"朗读全部"模式
 let allQueue = [];   // 待朗读的卡片 id 队列
+let allLoop = false; // 顶部"朗读全部"是否循环整组
 
 function findCard(id){ return document.getElementById(id); }
 function segsOf(card){ return Array.from(card.querySelectorAll(".line")); }
@@ -539,6 +543,10 @@ function setAllCtrl(){
   const btnPlay = document.getElementById("btnAllPlay");
   const btnPause = document.getElementById("btnAllPause");
   const btnStop = document.getElementById("btnAllStop");
+  const btnLoop = document.getElementById("btnAllLoop");
+  // 顶部循环按钮：始终显示当前开关状态（金色 = 循环全部）
+  btnLoop.classList.toggle("on", allLoop);
+  btnLoop.querySelector("span").textContent = allLoop ? "循环中" : "循环";
   if (playing){
     btnPlay.disabled = true;
     btnPlay.querySelector("span").textContent = "朗读中";
@@ -551,6 +559,17 @@ function setAllCtrl(){
     btnPause.disabled = true;
     btnPause.querySelector("span").textContent = "暂停";
     btnStop.disabled = true;
+  }
+}
+
+/* 切换"朗读全部"循环开关 */
+function toggleAllLoop(){
+  allLoop = !allLoop;
+  const btn = document.getElementById("btnAllLoop");
+  btn.classList.toggle("on", allLoop);
+  btn.querySelector("span").textContent = allLoop ? "循环中" : "循环";
+  if (!state.playing){
+    setAllStatus(allLoop ? "已开启全部循环：13 篇读完将自动从头重播" : "点击按钮，从「发愿」到「金光咒」依次朗读全部 13 篇");
   }
 }
 
@@ -668,6 +687,11 @@ function onCardDone(card){
     setAllStatus(`已完成：「${card.querySelector("h3").textContent}」`);
     resetCard(card);
     if (allQueue.length){
+      startCard(allQueue.shift(), true);
+    } else if (allLoop){
+      // 全部循环：13 篇读完，重新填充队列从头再播
+      allQueue = Array.from(document.querySelectorAll(".item")).map(c => c.id);
+      setAllStatus("全部 13 篇读完，开始循环重播…");
       startCard(allQueue.shift(), true);
     } else {
       finishAll();
@@ -811,6 +835,7 @@ document.addEventListener("click", (e) => {
   const allPlay = e.target.closest("#btnAllPlay");
   const allPause = e.target.closest("#btnAllPause");
   const allStop = e.target.closest("#btnAllStop");
+  const allLoopBtn = e.target.closest("#btnAllLoop");
   const play = e.target.closest(".btn-play");
   const pause = e.target.closest(".btn-pause");
   const stop = e.target.closest(".btn-stop");
@@ -818,6 +843,7 @@ document.addEventListener("click", (e) => {
   if (allPlay) { playAll(); return; }
   if (allPause) { state.paused ? resumeSpeak() : pauseSpeak(); return; }
   if (allStop) { stopAll(); return; }
+  if (allLoopBtn) { toggleAllLoop(); return; } // 注意：顶部循环按钮也是 .btn-loop，必须优先判断
   if (loop) { toggleLoop(loop.dataset.id); return; }
   if (play) playCard(play.dataset.id);
   else if (pause) {
