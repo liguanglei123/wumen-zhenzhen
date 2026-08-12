@@ -151,6 +151,28 @@
   }
   .line.speaking .note{color:var(--ink-soft)}
 
+  /* ===== 称名输入条 ===== */
+  .name-bar{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:8px 14px;
+    background:rgba(185,138,47,.08);
+    border-bottom:1px dashed var(--line);
+    font-size:14px;color:var(--ink-soft);
+  }
+  .name-bar label{letter-spacing:2px;flex:none}
+  .name-bar input{
+    flex:1;min-width:120px;font-family:inherit;font-size:15px;
+    border:1px solid var(--gold);border-radius:8px;
+    padding:5px 10px;color:var(--ink);background:#fff;
+    outline:none;
+  }
+  .name-bar input:focus{border-color:var(--red);box-shadow:0 0 0 2px rgba(166,61,44,.12)}
+  .name-bar .hint{font-size:12px;color:var(--ink-soft);letter-spacing:0}
+  .line .pname{
+    color:var(--red-deep);font-weight:700;
+    border-bottom:1.5px solid var(--red);
+  }
+
   /* ===== 控制条 ===== */
   .ctrl{
     display:flex;align-items:center;gap:12px;
@@ -321,7 +343,7 @@
 
 <main id="app"></main>
 
-<footer>心源动力训练 · 静心诵读 · 愿力无穷 · 锁屏/切后台时音频自动继续播放</footer>
+<footer>心源动力训练 · 静心诵读 · 愿力无穷</footer>
 
 <script>
 const AUDIO_BASE = "https://liguanglei123.github.io/wumen-zhenzhen/tts/";
@@ -464,19 +486,15 @@ DATA.forEach(sec => {
     const card = document.createElement("div");
     card.className = "item";
     card.id = id;
-    // 整段播放：各咒语播放完整梵音唱诵，不逐句朗读
-    const wholeMap = {
-      "般若波罗蜜多咒": "040",
-      "大悲咒": "045",
-      "准提咒": "067",
-      "药师佛心咒（注音）": "068",
-      "药师佛咒": "070"
-    };
-    if (wholeMap[item.title]){ card.dataset.whole = "1"; card.dataset.wholeSrc = wholeMap[item.title]; }
     const linesHtml = item.lines.map(l => {
       const ai = lineIdx++;
       if (typeof l === "object") {
         return `<p class="line" data-audio="${ai}" data-speak="${l.text.replace(/"/g,'&quot;')}">${l.text}<span class="note">${l.note}</span></p>`;
+      }
+      // 含"某甲"的称名句：拆出名字占位 + 标记分段播放
+      if (typeof l === "string" && l.indexOf("某甲") >= 0){
+        const parts = l.split("某甲");
+        return `<p class="line" data-audio="${ai}" data-split="1" data-prefix="${parts[0].replace(/"/g,'&quot;')}" data-suffix="${parts.slice(1).join("某甲").replace(/"/g,'&quot;')}">${parts[0]}<span class="pname">某甲</span>${parts.slice(1).join("某甲")}</p>`;
       }
       return `<p class="line" data-audio="${ai}" data-speak="${l.replace(/"/g,'&quot;')}">${l}</p>`;
     }).join("");
@@ -486,6 +504,12 @@ DATA.forEach(sec => {
         <h3>${item.title}</h3>
         <span class="count">共 ${item.lines.length} 句</span>
       </div>
+      ${item.lines.some(x => typeof x === "string" && x.indexOf("某甲") >= 0) ? `
+      <div class="name-bar">
+        <label>称名</label>
+        <input id="nameInput" maxlength="10" placeholder="输入你的名字，如：张某某">
+        <span class="hint">显示与朗读均会替换"某甲"</span>
+      </div>` : ""}
       <div class="lines">${linesHtml}</div>
       <div class="ctrl">
         <button class="btn btn-play" data-id="${id}">
@@ -585,11 +609,14 @@ function toggleAllLoop(){
 /* 停止一切并复位全部卡片 */
 function stopAll(){
   clearTimeout(ttsTimer);
+  clearTimeout(nameTimer);
   if (currentAudio){ currentAudio.pause(); currentAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
   resetAllCards();
   active = null;
   allMode = false; allQueue = [];
   state.paused = false; state.playing = false; state.idx = 0;
+  state.splitEl = null; state.splitSeg = 0;
   setAllCtrl();
   setAllStatus("点击按钮，从「发愿」到「金光咒」依次朗读全部 13 篇");
 }
@@ -610,29 +637,7 @@ function highlight(card, idx, total){
 /* ---- 音频播放引擎（内嵌 MP3，微信 / 手机均可用） ---- */
 let ttsTimer = null;
 let currentAudio = null; // 当前播放中的 Audio 对象
-
-/* 看门狗：音频时长自适应超时检查（锁屏/切后台时不误报） */
-function armWd(card, a){
-  clearTimeout(ttsTimer);
-  const d = (a.duration && isFinite(a.duration)) ? a.duration : 0;
-  const limit = Math.max(60, d * 2 + 5);
-  ttsTimer = setTimeout(() => {
-    if (!document.hidden && active && active.card === card && !state.paused && currentAudio === a){
-      warnAndStop(card, "音频播放无响应，请刷新页面重试");
-    }
-  }, limit * 1000);
-}
-
-/* 关屏/切后台续播：回到前台时若音频被系统暂停则恢复，并重新武装看门狗 */
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) return;
-  if (state.playing && !state.paused && active && currentAudio){
-    if (currentAudio.paused){
-      currentAudio.play().catch(() => {});
-    }
-    armWd(active.card, currentAudio);
-  }
-});
+let nameTimer = null;    // 称名停顿定时器
 
 function preCheckTTS(card){
   if (typeof Audio === "undefined"){
@@ -644,7 +649,9 @@ function preCheckTTS(card){
 
 function warnAndStop(card, msg){
   clearTimeout(ttsTimer);
+  clearTimeout(nameTimer);
   if (currentAudio){ currentAudio.pause(); currentAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
   resetCard(card);
   setStatus(card, "⚠ " + msg);
   setAllStatus("⚠ " + msg);
@@ -656,23 +663,50 @@ function warnAndStop(card, msg){
   setAllCtrl();
 }
 
+/* ---- 称名输入：显示替换 + 分段朗读 ---- */
+const NAME_KEY = "xinyuan_practitioner_name";
+
+function initName(){
+  const input = document.getElementById("nameInput");
+  if (!input) return;
+  let saved = "";
+  try { saved = localStorage.getItem(NAME_KEY) || ""; } catch(e){}
+  input.value = saved;
+  applyName(saved);
+  input.addEventListener("input", () => {
+    const v = input.value.trim();
+    try { localStorage.setItem(NAME_KEY, v); } catch(e){}
+    applyName(v);
+  });
+}
+function applyName(name){
+  document.querySelectorAll(".line[data-split] .pname").forEach(span => {
+    span.textContent = name || "某甲";
+  });
+}
+function currentName(){
+  const input = document.getElementById("nameInput");
+  const v = input ? input.value.trim() : "";
+  return v || "某甲";
+}
+
 function speakNext(card){
   clearTimeout(ttsTimer);
+  clearTimeout(nameTimer);
   const segs = segsOf(card);
-  // 整段播放卡片（般若波罗蜜多咒）：一次播放完整梵音唱诵，不逐句朗读
-  if (card.dataset.whole === "1"){
-    playWholeCard(card);
-    return;
-  }
   if (state.idx >= segs.length){
     onCardDone(card);
     return;
   }
   highlight(card, state.idx, segs.length);
   const el = segs[state.idx];
+  if (el.dataset.split){
+    // 称名句：前缀 → 名字 → 后缀 分段朗读
+    speakSplit(card, el, 0);
+    return;
+  }
   const ai = parseInt(el.dataset.audio, 10);
   const src = AUDIO_BASE + String(ai).padStart(3, "0") + ".mp3";
-  preloadNext(card, state.idx + 1); // 预加载下一句，减少句间卡顿
   if (!src){
     // 缺少该句音频：跳过继续
     state.idx++;
@@ -682,7 +716,18 @@ function speakNext(card){
   const a = new Audio(src);
   a.playbackRate = state.rate; // 语速（慢/常/快）
   currentAudio = a;
-  a.onloadedmetadata = () => armWd(card, a);
+  // 看门狗：依据音频时长自适应（最长 5 分钟）
+  const armWd = () => {
+    clearTimeout(ttsTimer);
+    const d = (a.duration && isFinite(a.duration)) ? a.duration : 0;
+    const limit = Math.max(60, d * 2 + 5);
+    ttsTimer = setTimeout(() => {
+      if (active && active.card === card && !state.paused && currentAudio === a){
+        warnAndStop(card, "音频播放无响应，请刷新页面重试");
+      }
+    }, limit * 1000);
+  };
+  a.onloadedmetadata = armWd;
   a.onended = () => {
     if (currentAudio !== a) return;
     currentAudio = null;
@@ -698,7 +743,7 @@ function speakNext(card){
     state.idx++;
     speakNext(card);
   };
-  armWd(card, a);
+  armWd();
   a.play().catch(() => {
     if (currentAudio !== a) return;
     currentAudio = null;
@@ -708,61 +753,81 @@ function speakNext(card){
   });
 }
 
-/* 预加载下一句音频：减少句间切换的网络等待（防卡顿） */
-function preloadNext(card, nextIdx){
-  const segs = segsOf(card);
-  if (nextIdx >= segs.length) return;
-  const el = segs[nextIdx];
-  if (!el) return;
-  const ai = parseInt(el.dataset.audio, 10);
-  if (isNaN(ai)) return;
-  const src = AUDIO_BASE + String(ai).padStart(3, "0") + ".mp3";
-  const p = new Audio();
-  p.preload = "auto";
-  p.src = src;
-}
-
-/* 整段播放（般若波罗蜜多咒）：一次播放完整梵音唱诵（tts/040.mp3），不分句 */
-function playWholeCard(card){
-  const segs = segsOf(card);
-  if (state.idx >= 1){ onCardDone(card); return; }
-  // 高亮整篇
-  segs.forEach(s => s.classList.add("done"));
-  const first = segs[0];
-  if (first){
-    first.classList.add("speaking");
-    first.scrollIntoView({block:"nearest", behavior:"smooth"});
-  }
-  setStatus(card, "正在播放完整唱诵");
-  const src = AUDIO_BASE + (card.dataset.wholeSrc || "040") + ".mp3";
-  const a = new Audio(src);
-  a.preload = "auto";
+/* ---- 称名句分段朗读：前缀 → 名字 → 后缀 ---- */
+function playSegAudio(card, el, a, onEnd){
+  if (currentAudio) currentAudio.pause();
   a.playbackRate = state.rate;
   currentAudio = a;
-  a.onloadedmetadata = () => armWd(card, a);
+  const armWd = () => {
+    clearTimeout(ttsTimer);
+    const d = (a.duration && isFinite(a.duration)) ? a.duration : 0;
+    ttsTimer = setTimeout(() => {
+      if (active && active.card === card && !state.paused && currentAudio === a){
+        warnAndStop(card, "音频播放无响应，请刷新页面重试");
+      }
+    }, Math.max(60, d * 2 + 5) * 1000);
+  };
+  a.onloadedmetadata = armWd;
   a.onended = () => {
     if (currentAudio !== a) return;
     currentAudio = null;
-    if (!active || active.card !== card) return;
-    state.idx = 1;
-    if (state.paused) return;
-    speakNext(card);
+    onEnd();
   };
   a.onerror = () => {
     if (currentAudio !== a) return;
     currentAudio = null;
-    if (!active || active.card !== card || state.paused) return;
-    state.idx = 1;
-    speakNext(card);
+    onEnd();
   };
-  armWd(card, a);
-  a.play().catch(() => {
-    if (currentAudio !== a) return;
-    currentAudio = null;
-    if (!active || active.card !== card || state.paused) return;
-    state.idx = 1;
-    speakNext(card);
-  });
+  armWd();
+  a.play().catch(onEnd);
+}
+
+function speakSplit(card, el, seg){
+  state.splitEl = el;
+  state.splitSeg = seg;
+  clearTimeout(nameTimer);
+  const ai = parseInt(el.dataset.audio, 10);
+  if (seg === 0){
+    // 前缀音频（如 "弟子"）：020a.mp3
+    const a = new Audio(AUDIO_BASE + String(ai).padStart(3, "0") + "a.mp3");
+    playSegAudio(card, el, a, () => {
+      if (!active || active.card !== card || state.paused) return;
+      speakSplit(card, el, 1);
+    });
+  } else if (seg === 1){
+    const name = currentName();
+    // 尝试用系统 TTS 朗读名字（微信等无 TTS 环境自动降级为停顿自念）
+    const synth = window.speechSynthesis;
+    const hasZh = synth && synth.getVoices().some(v => v.lang && v.lang.toLowerCase().indexOf("zh") === 0);
+    if (name !== "某甲" && hasZh){
+      const u = new SpeechSynthesisUtterance(name);
+      u.lang = "zh-CN";
+      u.rate = state.rate;
+      u.onend = () => {
+        if (!active || active.card !== card || state.paused) return;
+        speakSplit(card, el, 2);
+      };
+      u.onerror = () => {
+        if (!active || active.card !== card || state.paused) return;
+        speakSplit(card, el, 2);
+      };
+      synth.speak(u);
+    } else {
+      // 无 TTS：停顿约 1.6 秒，供自己随声念名
+      nameTimer = setTimeout(() => {
+        if (!active || active.card !== card || state.paused) return;
+        speakSplit(card, el, 2);
+      }, 1600);
+    }
+  } else {
+    // 后缀音频：020b.mp3
+    const a = new Audio(AUDIO_BASE + String(ai).padStart(3, "0") + "b.mp3");
+    playSegAudio(card, el, a, () => {
+      if (!active || active.card !== card || state.paused) return;
+      state.idx++;
+      speakNext(card);
+    });
+  }
 }
 
 /* 一篇朗读结束：全部模式 → 自动进入下一篇；单篇 → 循环或收尾 */
@@ -805,12 +870,15 @@ function toggleLoop(id){
 
 function finish(card){
   clearTimeout(ttsTimer);
+  clearTimeout(nameTimer);
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
   clearHighlight(card, true);
   setBtn(card, "play", false, "朗读");
   setBtn(card, "pause", true, "暂停");
   setBtn(card, "stop", true, "停止");
   setStatus(card, "朗读完成");
   state.playing = false; state.paused = false; state.idx = 0;
+  state.splitEl = null; state.splitSeg = 0;
   active = null;
   setAllStatus("本篇朗读完成，可继续选择其他篇目或点击「朗读全部」");
   setAllCtrl();
@@ -819,9 +887,12 @@ function finish(card){
 /* 朗读全部完成 */
 function finishAll(){
   clearTimeout(ttsTimer);
+  clearTimeout(nameTimer);
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
   resetAllCards();
   active = null; allMode = false; allQueue = [];
   state.playing = false; state.paused = false; state.idx = 0;
+  state.splitEl = null; state.splitSeg = 0;
   setAllStatus("全部 13 篇朗读完成");
   setAllCtrl();
 }
@@ -839,7 +910,7 @@ function startCard(id, fromAll){
   setBtn(card, "play", true, "朗读中");
   setBtn(card, "pause", false, "暂停");
   setBtn(card, "stop", false, "停止");
-  setStatus(card, card.dataset.whole === "1" ? "正在播放完整唱诵" : `正在朗读 1 / ${segsOf(card).length}`);
+  setStatus(card, `正在朗读 1 / ${segsOf(card).length}`);
   setAllStatus(`正在朗读：「${card.querySelector("h3").textContent}」`);
   if (fromAll){
     card.scrollIntoView({behavior:"smooth", block:"start"});
@@ -884,10 +955,12 @@ function pauseSpeak(){
   if (!active || !state.playing || state.paused) return;
   state.paused = true;
   if (currentAudio) currentAudio.pause();
+  if (window.speechSynthesis) window.speechSynthesis.cancel(); // 名字朗读中断
+  clearTimeout(nameTimer);
   const card = active.card;
   setBtn(card, "pause", false, "继续");
   const total = segsOf(card).length;
-  setStatus(card, card.dataset.whole === "1" ? "已暂停完整唱诵" : `已暂停 ${Math.min(state.idx+1, total)} / ${total}`);
+  setStatus(card, `已暂停 ${Math.min(state.idx+1, total)} / ${total}`);
   setAllCtrl();
 }
 function resumeSpeak(){
@@ -896,11 +969,14 @@ function resumeSpeak(){
   const card = active.card;
   setBtn(card, "pause", false, "暂停");
   const total = segsOf(card).length;
-  setStatus(card, card.dataset.whole === "1" ? "继续播放完整唱诵" : `继续朗读 ${Math.min(state.idx+1, total)} / ${total}`);
+  setStatus(card, `继续朗读 ${Math.min(state.idx+1, total)} / ${total}`);
   setAllCtrl();
   if (currentAudio){
     // 从暂停处继续（不重读当前句）
     currentAudio.play().catch(() => {});
+  } else if (state.splitEl && state.splitSeg >= 1){
+    // 称名句在"名字段"被暂停：重读名字段继续
+    speakSplit(active.card, state.splitEl, state.splitSeg);
   } else {
     speakNext(card);
   }
@@ -946,7 +1022,10 @@ document.addEventListener("change", (e) => {
     state.rate = parseFloat(e.target.value);
   }
 });
-window.addEventListener("beforeunload", () => { if (currentAudio) currentAudio.pause(); });
+window.addEventListener("beforeunload", () => {
+  if (currentAudio) currentAudio.pause();
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+});
 
 /* ================= 音频可用性提示 ================= */
 (function(){
@@ -955,6 +1034,8 @@ window.addEventListener("beforeunload", () => { if (currentAudio) currentAudio.p
     tip.style.display = "block";
     tip.textContent = "⚠ 当前浏览器不支持音频播放，请使用较新版本的浏览器打开。";
   }
+  // 初始化称名输入（读本地保存的名字）
+  initName();
 })();
 </script>
 </body>
