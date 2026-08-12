@@ -347,6 +347,12 @@
 
 <script>
 const AUDIO_BASE = "https://liguanglei123.github.io/wumen-zhenzhen/tts/";
+// 预合成名字发音：输入这些名字时播放对应音频
+const NAME_AUDIO_MAP = {
+  "李光磊": "name_liguanglei.mp3",
+  "孟凡生": "name_mengfansheng.mp3",
+  "侯芳": "name_houfang.mp3"
+};
 /* ================= 内容数据 ================= */
 const DATA = [
   {
@@ -796,7 +802,17 @@ function speakSplit(card, el, seg){
     });
   } else if (seg === 1){
     const name = currentName();
-    // 尝试用系统 TTS 朗读名字（微信等无 TTS 环境自动降级为停顿自念）
+    // 1) 预合成名字音频：三个固定名字直接播放对应 mp3
+    const fixed = NAME_AUDIO_MAP[name];
+    if (fixed){
+      const a = new Audio(AUDIO_BASE + fixed);
+      playSegAudio(card, el, a, () => {
+        if (!active || active.card !== card || state.paused) return;
+        speakSplit(card, el, 2);
+      });
+      return;
+    }
+    // 2) 尝试用系统 TTS 朗读名字（微信等无 TTS 环境自动降级为停顿自念）
     const synth = window.speechSynthesis;
     const hasZh = synth && synth.getVoices().some(v => v.lang && v.lang.toLowerCase().indexOf("zh") === 0);
     if (name !== "某甲" && hasZh){
@@ -813,7 +829,7 @@ function speakSplit(card, el, seg){
       };
       synth.speak(u);
     } else {
-      // 无 TTS：停顿约 1.6 秒，供自己随声念名
+      // 3) 无 TTS：停顿约 1.6 秒，供自己随声念名
       nameTimer = setTimeout(() => {
         if (!active || active.card !== card || state.paused) return;
         speakSplit(card, el, 2);
